@@ -1,0 +1,13 @@
+﻿Testing Progress Calculation Logic (Standalone):
+----------------------------------------------
+Dir: increase | Base: 50 | Plan: 100 | Act: 80 | Exp: 60 | Res: 60 | PASS
+Dir: increase | Base: 50 | Plan: 100 | Act: 120 | Exp: 100 | Res: 100 | PASS
+Dir: increase | Base: 50 | Plan: 100 | Act: 40 | Exp: 0 | Res: 0 | PASS
+Dir: increase | Base: 100 | Plan: 100 | Act: 100 | Exp: 100 | Res: 100 | PASS
+Dir: increase | Base: 100 | Plan: 100 | Act: 90 | Exp: 90 | Res: 90 | PASS
+Dir: decrease | Base: 130 | Plan: 70 | Act: 100 | Exp: 50 | Res: 50 | PASS
+Dir: decrease | Base: 130 | Plan: 70 | Act: 60 | Exp: 100 | Res: 100 | PASS
+Dir: decrease | Base: 130 | Plan: 70 | Act: 140 | Exp: 0 | Res: 0 | PASS
+Dir: decrease | Base: 70 | Plan: 70 | Act: 70 | Exp: 100 | Res: 100 | PASS
+Dir: decrease | Base: 70 | Plan: 70 | Act: 140 | Exp: 50 | Res: 50 | PASS
+----------------------------------------------

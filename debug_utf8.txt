@@ -1,0 +1,35 @@
+﻿--- DEPARTMENTS ---
+ID: 1 | Name: Freight Transport Services Directorate | Parent: 
+ID: 2 | Name: Operation Department | Parent: 
+ID: 3 | Name: Rolling Stock | Parent: 2
+ID: 4 | Name: Training and Consultancy | Parent: 
+ID: 6 | Name: Software Development | Parent: 4
+ID: 7 | Name: Plan and Evaluation | Parent: 
+ID: 9 | Name: Global Logistics | Parent: 
+ID: 10 | Name: Digital Office | Parent: 
+ID: 11 | Name: ICT | Parent: 
+ID: 12 | Name: Operation | Parent: 
+ID: 13 | Name: B&M | Parent: 
+ID: 14 | Name: S&E | Parent: 
+ID: 15 | Name: Passenger | Parent: 
+ID: 16 | Name: Infrastructure | Parent: 
+ID: 17 | Name: Engineering | Parent: 
+ID: 18 | Name: Security | Parent: 
+ID: 19 | Name: Research | Parent: 
+ID: 20 | Name: Finance | Parent: 
+ID: 21 | Name: Procurement | Parent: 
+ID: 22 | Name: Auditing | Parent: 
+ID: 23 | Name: Marketing | Parent: 
+ID: 24 | Name: H.R | Parent: 
+ID: 25 | Name: Planning | Parent: 
+ID: 26 | Name: Legal | Parent: 
+ID: 27 | Name: Ethics | Parent: 
+ID: 28 | Name: Communication | Parent: 
+ID: 29 | Name: OCC | Parent: 
+ID: 30 | Name: Workshop | Parent: 
+ID: 31 | Name: Capacity Building | Parent: 
+
+--- PLAN ITEMS FOR PLAN 2018 (if exists) ---
+Plan Found: ID 1 for Dept 1
+Item ID: 1 | Obj ID: 1 | Performers: ["1"] | Experts: null
+Item ID: 2 | Obj ID: 2 | Performers: ["1"] | Experts: null

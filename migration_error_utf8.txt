@@ -1,0 +1,26 @@
+﻿
+   INFO  Running migrations.  
+
+  2026_03_18_092500_create_daily_performances_table  27.22ms FAIL
+
+   Illuminate\Database\QueryException 
+
+  SQLSTATE[42S01]: Base table or view already exists: 1050 Table 'daily_performances' already exists (Connection: mysql, Host: 127.0.0.1, Port: 3306, Database: iprpms_db, SQL: create table `daily_performances` (`id` bigint unsigned not null auto_increment primary key, `plan_item_id` bigint unsigned not null, `year` int not null, `month` varchar(255) not null, `week_number` int not null, `day_of_week` int not null, `actual_value` decimal(12, 2) not null, `notes` text null, `created_by` bigint unsigned null, `created_at` timestamp null, `updated_at` timestamp null) default character set utf8mb4 collate 'utf8mb4_unicode_ci')
+
+  at vendor\laravel\framework\src\Illuminate\Database\Connection.php:831
+    827Γûò             $exceptionType = $this->isUniqueConstraintError($e)
+    828Γûò                 ? UniqueConstraintViolationException::class
+    829Γûò                 : QueryException::class;
+    830Γûò 
+  Γ₧£ 831Γûò             throw new $exceptionType(
+    832Γûò                 $this->getNameWithReadWriteType(),
+    833Γûò                 $query,
+    834Γûò                 $this->prepareBindings($bindings),
+    835Γûò                 $e,
+
+  1   vendor\laravel\framework\src\Illuminate\Database\Connection.php:577
+      PDOException::("SQLSTATE[42S01]: Base table or view already exists: 1050 Table 'daily_performances' already exists")
+
+  2   vendor\laravel\framework\src\Illuminate\Database\Connection.php:577
+      PDOStatement::execute()
+

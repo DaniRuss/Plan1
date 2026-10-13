@@ -1,0 +1,32 @@
+[
+    {
+        "id": 1,
+        "name": "Freight Transport Services Directorate",
+        "parent_id": null
+    },
+    {
+        "id": 2,
+        "name": "Operation Department",
+        "parent_id": null
+    },
+    {
+        "id": 3,
+        "name": "Rolling Stock",
+        "parent_id": 2
+    },
+    {
+        "id": 4,
+        "name": "Training and Consultancy",
+        "parent_id": null
+    },
+    {
+        "id": 6,
+        "name": "Software Development",
+        "parent_id": 4
+    },
+    {
+        "id": 7,
+        "name": "Plan and Evaluation",
+        "parent_id": null
+    }
+]

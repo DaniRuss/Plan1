@@ -1,0 +1,14 @@
+[08-Oct-2026 13:25:31 UTC] PHP Fatal error:  Uncaught RuntimeException: Composer detected issues in your platform: Your Composer dependencies require a PHP version ">= 8.2.0". You are running 8.1.34. in /home/edrsccup/testing-plan-report.edrsc.com/Plan/vendor/composer/platform_check.php:26
+Stack trace:
+#0 /home/edrsccup/testing-plan-report.edrsc.com/Plan/vendor/composer/autoload_real.php(25): require()
+#1 /home/edrsccup/testing-plan-report.edrsc.com/Plan/vendor/autoload.php(22): ComposerAutoloaderInitc514d8f7b9fc5970bdd94287905ef584::getLoader()
+#2 /home/edrsccup/testing-plan-report.edrsc.com/Plan/public/index.php(14): require('/home/edrsccup/...')
+#3 {main}
+  thrown in /home/edrsccup/testing-plan-report.edrsc.com/Plan/vendor/composer/platform_check.php on line 26
+[08-Oct-2026 13:27:24 UTC] PHP Fatal error:  Uncaught RuntimeException: Composer detected issues in your platform: Your Composer dependencies require a PHP version ">= 8.2.0". You are running 8.1.34. in /home/edrsccup/testing-plan-report.edrsc.com/Plan/vendor/composer/platform_check.php:26
+Stack trace:
+#0 /home/edrsccup/testing-plan-report.edrsc.com/Plan/vendor/composer/autoload_real.php(25): require()
+#1 /home/edrsccup/testing-plan-report.edrsc.com/Plan/vendor/autoload.php(22): ComposerAutoloaderInitc514d8f7b9fc5970bdd94287905ef584::getLoader()
+#2 /home/edrsccup/testing-plan-report.edrsc.com/Plan/public/index.php(14): require('/home/edrsccup/...')
+#3 {main}
+  thrown in /home/edrsccup/testing-plan-report.edrsc.com/Plan/vendor/composer/platform_check.php on line 26

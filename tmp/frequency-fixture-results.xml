@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites>
+  <testsuite name="C:\laragon\www\Plan\phpunit.xml" tests="4" assertions="81" errors="0" failures="0" skipped="0" time="3.072528">
+    <testsuite name="Feature" tests="4" assertions="81" errors="0" failures="0" skipped="0" time="3.072528">
+      <testsuite name="Tests\Feature\MonthlyPerformanceParentRollupTest" file="C:\laragon\www\Plan\tests\Feature\MonthlyPerformanceParentRollupTest.php" tests="1" assertions="20" errors="0" failures="0" skipped="0" time="2.109747">
+        <testcase name="test_monthly_parent_is_read_only_and_recalculated_from_children" file="C:\laragon\www\Plan\tests\Feature\MonthlyPerformanceParentRollupTest.php" line="20" class="Tests\Feature\MonthlyPerformanceParentRollupTest" classname="Tests.Feature.MonthlyPerformanceParentRollupTest" assertions="20" time="2.109747"/>
+      </testsuite>
+      <testsuite name="Tests\Feature\UserManagementWorkflowTest" file="C:\laragon\www\Plan\tests\Feature\UserManagementWorkflowTest.php" tests="3" assertions="61" errors="0" failures="0" skipped="0" time="0.962781">
+        <testcase name="test_workflow_users_can_move_weekly_performance_from_expert_to_head_office_approval" file="C:\laragon\www\Plan\tests\Feature\UserManagementWorkflowTest.php" line="192" class="Tests\Feature\UserManagementWorkflowTest" classname="Tests.Feature.UserManagementWorkflowTest" assertions="32" time="0.307160"/>
+        <testcase name="test_workflow_users_can_move_monthly_performance_from_expert_to_head_office_approval" file="C:\laragon\www\Plan\tests\Feature\UserManagementWorkflowTest.php" line="383" class="Tests\Feature\UserManagementWorkflowTest" classname="Tests.Feature.UserManagementWorkflowTest" assertions="14" time="0.173217"/>
+        <testcase name="test_workflow_periods_remain_visible_to_department_roles_but_only_current_owner_can_edit" file="C:\laragon\www\Plan\tests\Feature\UserManagementWorkflowTest.php" line="528" class="Tests\Feature\UserManagementWorkflowTest" classname="Tests.Feature.UserManagementWorkflowTest" assertions="15" time="0.482403"/>
+      </testsuite>
+    </testsuite>
+  </testsuite>
+</testsuites>

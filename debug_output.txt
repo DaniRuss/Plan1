@@ -1,0 +1,10 @@
+ID: 15
+Desc: Improve train punctuality and reliability rates from 59.7% to 70% (by17%)
+Baseline: 0.000000
+Summary Type: weighted
+Goal Direction: decrease
+Unit: Percentage (%)
+--- Performance ---
+Plan: 1.670000
+Actual: 0.600000
+Percentage: 100.000000

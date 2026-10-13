@@ -1,0 +1,9 @@
+﻿Found 1 objectives for KPI: K1
+
+=== Objective: 9.2 - Implement 100% ERP system (ID: 20) ===
+Total Plan Items: 1
+  - PlanItem ID 36 | Plan ID: 12  | Year: 2018 | Status: approved
+    - Performances count: 0
+
+=== Dashboard Query Test ===
+Dashboard loaded Obj ID 20 with 0 plan items (filtered by year=2026, status=approved)

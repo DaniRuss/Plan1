@@ -1,0 +1,16 @@
+[
+    {
+        "id": 20,
+        "code": null,
+        "kpi": "K1",
+        "planItems": [
+            {
+                "item_id": 36,
+                "plan_id": 12,
+                "plan_year": 2018,
+                "plan_status": "approved",
+                "performances": []
+            }
+        ]
+    }
+]
