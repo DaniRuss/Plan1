@@ -2,6 +2,8 @@
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 
 <head>
+    <script src="{{ asset('js/number-format.js') }}"></script>
+    @include('layouts.favicon')
 
     {{-- Base Meta Tags --}}
     <meta charset="utf-8">

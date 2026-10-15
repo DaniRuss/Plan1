@@ -7,7 +7,7 @@
 
 @if($completeness)
     <div class="alert alert-{{ $completeness['status'] === 'Complete' ? 'success' : 'warning' }} py-2">
-        <strong>{{ $completeness['status'] }}</strong> · Expected: {{ $completeness['expected'] }} · Submitted: {{ $completeness['submitted'] }} · Approved: {{ $completeness['approved'] }} · Planning coverage: {{ number_format($completeness['planning_coverage'], 1) }}% · Reporting coverage: {{ number_format($completeness['reporting_coverage'], 1) }}%
+        <strong>{{ $completeness['status'] }}</strong> · Expected: {{ $completeness['expected'] }} · Submitted: {{ $completeness['submitted'] }} · Approved: {{ $completeness['approved'] }} · Planning coverage: {{ \App\Support\NumberFormatter::format($completeness['planning_coverage'],3) }}% · Reporting coverage: {{ \App\Support\NumberFormatter::format($completeness['reporting_coverage'],3) }}%
         @if($completeness['status'] === 'Provisional')
             <div class="small">Achievement uses final-approved reporting periods only.</div>
         @endif
@@ -94,16 +94,16 @@
                         @if(!$data['is_planned'])
                             N/A
                         @elseif(abs($data['weight'] - $data['base_weight']) > 0.0001)
-                            <small><del>{{ round($data['base_weight'], 2) }}</del></small> {{ round($data['weight'], 2) }}
+                            <small><del>{{ \App\Support\NumberFormatter::format($data['base_weight']) }}</del></small> {{ \App\Support\NumberFormatter::format($data['weight']) }}
                         @else
-                            {{ round($data['weight'], 2) }}
+                            {{ \App\Support\NumberFormatter::format($data['weight']) }}
                         @endif
                     </td>
                     <td>{{ $data['measurement'] }}</td>
-                    <td>{{ $data['has_children'] && $data['is_planned'] ? 'Roll-up' : ($data['is_planned'] ? number_format($data['quarter_plan'], 2, '.', ',') : 'N/A') }}</td>
-                    <td>{{ $data['has_children'] && $data['is_planned'] ? 'Roll-up' : ($data['is_planned'] ? number_format($data['quarter_perf'], 2, '.', ',') : 'N/A') }}</td>
+                    <td>{{ $data['has_children'] && $data['is_planned'] ? 'Roll-up' : ($data['is_planned'] ? \App\Support\NumberFormatter::format($data['quarter_plan'],3, '.', ',') : 'N/A') }}</td>
+                    <td>{{ $data['has_children'] && $data['is_planned'] ? 'Roll-up' : ($data['is_planned'] ? \App\Support\NumberFormatter::format($data['quarter_perf'],3, '.', ',') : 'N/A') }}</td>
                     <td class="font-weight-bold">
-                        {{ $data['is_planned'] ? number_format($rawAchievement, 1) . '%' : 'N/A' }}
+                        {{ $data['is_planned'] ? \App\Support\NumberFormatter::format($rawAchievement,3) . '%' : 'N/A' }}
                     </td>
                     <td style="background:{{ $level['hex'] ?? $level['color'] ?? '#6C757D' }};color:{{ $level['textHex'] ?? $level['text_color'] ?? '#FFFFFF' }};font-weight:700" title="{{ $level['label'] }}">
                         @if(!$data['is_planned'])
@@ -111,14 +111,14 @@
                         @elseif(is_null($scorecardAchievement))
                             Operational
                         @else
-                            {{ number_format($scorecardAchievement, 1) }}%
+                            {{ \App\Support\NumberFormatter::format($scorecardAchievement,3) }}%
                         @endif
                     </td>
                     <td><span class="badge {{ $performanceStatus === 'Overachieved' ? 'badge-info' : ($performanceStatus === 'Achieved' ? 'badge-success' : ($performanceStatus === 'Not Planned (N/A)' ? 'badge-secondary' : 'badge-warning')) }}">{{ $performanceStatus }}</span></td>
                     <td>{{ $data['performer'] ?: 'N/A' }}</td>
-                    <td>{{ $data['is_planned'] ? number_format($data['score_factor'], 4) : 'N/A' }}</td>
-                    <td>{{ number_format($data['weighted_score'], 4) }}</td>
-                    <td>{{ $data['has_children'] ? number_format($data['weighted_score'], 4) : '' }}</td>
+                    <td>{{ $data['is_planned'] ? \App\Support\NumberFormatter::format($data['score_factor'],3) : 'N/A' }}</td>
+                    <td>{{ \App\Support\NumberFormatter::format($data['weighted_score'],3) }}</td>
+                    <td>{{ $data['has_children'] ? \App\Support\NumberFormatter::format($data['weighted_score'],3) : '' }}</td>
                 </tr>
             @empty
                 <tr><td colspan="13" class="py-4 text-muted text-center">Performance data is unavailable for this period. Ensure an approved plan exists.</td></tr>
@@ -128,9 +128,9 @@
             <tfoot style="background:#13714c;color:#fff;font-weight:700">
                 <tr>
                     <td colspan="11" class="text-right">TOTAL EDR ACHIEVEMENT</td>
-                    <td>{{ number_format($summary['weighted_score'], 4) }}</td>
+                    <td>{{ \App\Support\NumberFormatter::format($summary['weighted_score'],3) }}</td>
                     <td style="background:{{ $summary['performance_level']['hex'] ?? '#6C757D' }};color:{{ $summary['performance_level']['textHex'] ?? '#FFFFFF' }}">
-                        {{ is_null($summary['achievement']) ? 'N/A' : number_format($summary['achievement'], 2) . '%' }}
+                        {{ is_null($summary['achievement']) ? 'N/A' : \App\Support\NumberFormatter::format($summary['achievement'],3) . '%' }}
                     </td>
                 </tr>
                 <tr>

@@ -1,7 +1,22 @@
 @extends('layouts.app')
+@section('title', 'Strategic Objectives')
 
 @push('styles')
 <style>
+    .objective-allocation{padding:20px;border:1px solid #deebe9;border-radius:12px;background:#f5faf9}
+    .allocation-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+    .allocation-metrics small,.allocation-metrics strong{display:block}
+    .allocation-metrics small{color:#647582;margin-bottom:5px}
+    .allocation-metrics strong{font-size:1.35rem;color:#17394b;font-variant-numeric:tabular-nums}
+    .objective-hierarchy-table{font-size:.9rem;min-width:980px}
+    .objective-hierarchy-table td,.objective-hierarchy-table th{padding:14px 12px;vertical-align:middle}
+    .objective-hierarchy-table thead th{font-size:.78rem;color:#526775;background:#f2f6f8;white-space:nowrap}
+    .objective-hierarchy-table .objective-code{color:#087f73;white-space:nowrap}
+    .objective-description{color:#17394b;font-weight:600;display:block;margin-bottom:4px}
+    .objective-number{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+    .objective-row-actions{display:flex;flex-wrap:wrap;gap:6px;min-width:170px}
+    .objective-row-actions .btn{white-space:nowrap}
+    @media(max-width:600px){.allocation-metrics{grid-template-columns:1fr}.objective-allocation{padding:16px}}
     .objective-kpi-owned { border-left: 5px solid #6f42c1 !important; background: #f5efff !important; }
     .objective-kpi-owned-row td { background: #f5efff !important; }
     .badge-kpi-owned { background: #6f42c1; color: #fff; font-weight: 700; }
@@ -111,6 +126,7 @@
          <div class="row mb-2 objectives-page-heading">
             <div class="col-lg-4">
                 <h1 class="m-0">Strategic Objectives</h1>
+                <p class="text-muted small mb-0">Expand an objective to review its activities and weight allocation. Open its details for targets, responsibilities, and reporting rules.</p>
             </div>
              <div class="col-lg-8">
                 <!-- Actions -->
@@ -147,33 +163,22 @@
                 <div class="card-header" id="heading{{ $mainObj->id }}">
                     <h5 class="mb-0">
                         <button class="btn btn-link btn-block text-left d-flex justify-content-between align-items-center" 
-                                type="button" data-toggle="collapse" 
+                                type="button" aria-expanded="false" aria-controls="collapse{{ $mainObj->id }}" data-toggle="collapse" 
                                 data-target="#collapse{{ $mainObj->id }}">
                             <div>
                                 <strong class="text-primary">{{ $mainObj->code }}</strong> - 
-                                {{ Str::limit($mainObj->description, 60) }}
+                                {{ $mainObj->description }}
                                 @if($mainIsYourKpi)
                                     <span class="badge badge-kpi-owned ml-2"><i class="fas fa-bullseye mr-1"></i>Your KPI: {{ $mainObj->kpi_code }}</span>
                                 @elseif($mainObj->kpi_code)
                                     <span class="badge badge-kpi-code ml-2">KPI: {{ $mainObj->kpi_code }}</span>
                                 @endif
                                 <span class="badge badge-info ml-2">{{ $mainObj->children->count() }} sub-objectives</span>
+                                <small class="d-block text-muted mt-1">Owner: {{ $mainObj->department?->name ?? 'Not assigned' }} · Target year: {{ $mainObj->target_year ?? 'Not set' }} · Unit: {{ $mainObj->unit ?: 'Not set' }}</small>
                             </div>
                             <div>
-                                <span class="badge badge-light border">Weight: {{ $mainObj->weight }}%</span>
-                                @if($mainObj->status === 'approved')
-                                    <span class="badge badge-success ml-2">Approved</span>
-                                @elseif($mainObj->status === 'returned')
-                                    <span class="badge badge-danger ml-2" title="{{ $mainObj->rejection_comment }}">Returned</span>
-                                @elseif($mainObj->status === 'submitted')
-                                    <span class="badge badge-info ml-2">Sent to Head of Plan &amp; Report</span>
-                                @elseif($mainObj->status === 'submitted_to_plan_report_directorate')
-                                    <span class="badge badge-info ml-2">Sent to Plan &amp; Report Directorate</span>
-                                @elseif(str_starts_with($mainObj->status, 'recall_requested_'))
-                                    <span class="badge badge-warning ml-2">Recall Approval Pending</span>
-                                @else
-                                    <span class="badge badge-secondary ml-2">Draft</span>
-                                @endif
+                                <span class="badge badge-light border">Weight: {{ \App\Support\NumberFormatter::format($mainObj->weight) }}%</span>
+                                @include('objectives.partials.status', ['objective' => $mainObj])
                                 <i class="fas fa-chevron-down ml-2"></i>
                             </div>
                         </button>
@@ -182,140 +187,27 @@
                 
                 <div id="collapse{{ $mainObj->id }}" class="collapse" data-parent="#objectivesAccordion">
                     <div class="card-body">
-                         <!-- Weight Visual -->
-                        <div class="row mb-3">
-                            <div class="col-md-12">
-                                <label class="small text-muted mb-0">Weight Allocation (Total: {{ $mainObj->weight }}%)</label>
-                                <div class="progress" style="height: 15px;">
-                                    @php 
-                                        $alloc = $mainObj->getAllocatedWeight();
-                                        $pct = $mainObj->weight > 0 ? ($alloc / $mainObj->weight) * 100 : 0;
-                                    @endphp
-                                    <div class="progress-bar {{ $pct > 100 ? 'bg-danger' : 'bg-success' }}" role="progressbar" style="width: {{ $pct }}%">
-                                        {{ number_format($alloc, 2) }}% Used
-                                    </div>
-                                </div>
-                                <small class="text-muted">Remaining to allocate: {{ number_format($mainObj->getRemainingWeight(), 2) }}%</small>
-                            </div>
-                        </div>
+                        @include('objectives.partials.weight-allocation')
 
                          @if($mainObj->children->count() > 0)
-                         <table class="table table-sm table-hover">
+                         <div class="table-responsive"><table class="table table-hover objective-hierarchy-table">
                             <thead class="bg-light">
                                 <tr>
                                     <th>Code</th>
                                     <th>Sub-Objective / Activity</th>
                                     <th>Unit</th>
-                                    <th>Weight</th>
-                                    <th>% of Parent</th>
+                                    <th class="text-right">Overall weight</th>
+                                    <th class="text-right">Parent share</th>
                                     <th>Status</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach($mainObj->children as $child)
-                                @php
-                                    $childIsYourKpi = $child->isKpiForDepartment(auth()->user()->department_id);
-                                @endphp
-                                <tr class="{{ $childIsYourKpi ? 'objective-kpi-owned-row' : '' }}">
-                                    <td>{{ $child->code }}</td>
-                                    <td>
-                                        {{ $child->description }}
-                                        @if($childIsYourKpi)
-                                            <span class="badge badge-kpi-owned ml-2"><i class="fas fa-bullseye mr-1"></i>Your KPI: {{ $child->kpi_code }}</span>
-                                        @elseif($child->kpi_code)
-                                            <span class="badge badge-kpi-code ml-2">KPI: {{ $child->kpi_code }}</span>
-                                        @endif
-                                    </td>
-                                    <td>{{ $child->unit }}</td>
-                                    <td>{{ $child->weight }}%</td>
-                                    <td>{{ $mainObj->weight > 0 ? number_format(($child->weight / $mainObj->weight)*100, 1) : 0 }}%</td>
-                                    <td>
-                                        @if($child->status === 'approved')
-                                            <span class="badge badge-success badge-sm">Approved</span>
-                                        @elseif($child->status === 'returned')
-                                            <span class="badge badge-danger badge-sm" title="{{ $child->rejection_comment }}">Returned</span>
-                                        @elseif($child->status === 'submitted')
-                                            <span class="badge badge-info badge-sm">Submitted</span>
-                                        @else
-                                            <span class="badge badge-secondary badge-sm">Draft</span>
-                                        @endif
-                                    </td>
-                                    <td>
-                                        <div class="btn-group btn-group-sm">
-                                            <a href="{{ route('objectives.show', $child->id) }}" class="btn btn-info"><i class="fas fa-eye"></i></a>
-                                            @if($child->status === 'approved')<a href="{{ route('objectives.download', $child) }}" class="btn btn-danger" title="Download this objective"><i class="fas fa-file-pdf"></i></a>@endif
-                                            @if($canEditObjective($child))
-                                                <a href="{{ route('objectives.edit', $child->id) }}" class="btn btn-warning"><i class="fas fa-edit"></i></a>
-                                            @endif
-                                            @can('manage_objectives')
-                                                @if($child->status === 'draft' || $child->status === 'returned')
-                                                <a href="{{ route('objectives.create', ['parent_id' => $child->id]) }}" class="btn btn-success" title="Add Activity"><i class="fas fa-plus"></i></a>
-                                                @endif
-                                            @endcan
-                                        </div>
-                                    </td>
-                                </tr>
-                                @if($child->children->count() > 0)
-                                    @foreach($child->children as $grandchild)
-                                    @php
-                                        $grandchildIsYourKpi = $grandchild->isKpiForDepartment(auth()->user()->department_id);
-                                    @endphp
-                                    <tr class="{{ $grandchildIsYourKpi ? 'objective-kpi-owned-row' : 'bg-light' }}">
-                                        <td class="pl-4 border-left border-info text-muted">↳ {{ $grandchild->code }}</td>
-                                        <td class="pl-4 text-muted">
-                                            {{ $grandchild->description }}
-                                            @if($grandchildIsYourKpi)
-                                                <span class="badge badge-kpi-owned ml-2"><i class="fas fa-bullseye mr-1"></i>Your KPI: {{ $grandchild->kpi_code }}</span>
-                                            @elseif($grandchild->kpi_code)
-                                                <span class="badge badge-kpi-code ml-2">KPI: {{ $grandchild->kpi_code }}</span>
-                                            @endif
-                                        </td>
-                                        <td><small>{{ $grandchild->unit }}</small></td>
-                                        <td><small>{{ $grandchild->weight }}%</small></td>
-                                        <td><small>{{ $child->weight > 0 ? number_format(($grandchild->weight / $child->weight)*100, 1) : 0 }}%</small></td>
-                                        <td>
-                                            @if($grandchild->status === 'approved')
-                                                <span class="badge badge-success badge-sm">Approved</span>
-                                            @elseif($grandchild->status === 'returned')
-                                                <span class="badge badge-danger badge-sm" title="{{ $grandchild->rejection_comment }}">Returned</span>
-                                            @elseif($grandchild->status === 'submitted')
-                                                <span class="badge badge-info badge-sm">Submitted</span>
-                                            @else
-                                                <span class="badge badge-secondary badge-sm">Draft</span>
-                                            @endif
-                                        </td>
-                                        <td>
-                                            <div class="btn-group btn-group-sm">
-                                                <a href="{{ route('objectives.show', $grandchild->id) }}" class="btn btn-info"><i class="fas fa-eye"></i></a>
-                                                @if($grandchild->status === 'approved')<a href="{{ route('objectives.download', $grandchild) }}" class="btn btn-danger" title="Download this activity"><i class="fas fa-file-pdf"></i></a>@endif
-                                                @if($canEditObjective($grandchild))
-                                                    <a href="{{ route('objectives.edit', $grandchild->id) }}" class="btn btn-warning"><i class="fas fa-edit"></i></a>
-                                                @endif
-                                                @can('manage_objectives')
-                                                    @if(in_array($grandchild->status, ['draft', 'returned'], true))
-                                                        <a href="{{ route('objectives.create', ['parent_id' => $grandchild->id]) }}" class="btn btn-success" title="Add detail activity"><i class="fas fa-plus"></i></a>
-                                                    @endif
-                                                @endcan
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    @foreach($grandchild->children as $detail)
-                                    <tr class="bg-light">
-                                        <td class="pl-5 border-left border-secondary text-muted">{{ $detail->code }}</td>
-                                        <td class="pl-5 text-muted">{{ $detail->description }} @if($detail->is_reference_only)<span class="badge badge-light border ml-1">Unweighted detail</span>@endif</td>
-                                        <td><small>{{ $detail->unit }}</small></td>
-                                        <td><small>{{ $detail->weight }}%</small></td>
-                                        <td><small>{{ $grandchild->weight > 0 ? number_format(($detail->weight / $grandchild->weight) * 100, 1) : 0 }}%</small></td>
-                                        <td><span class="badge badge-{{ $detail->status === 'approved' ? 'success' : ($detail->status === 'returned' ? 'danger' : 'secondary') }} badge-sm">{{ ucfirst($detail->status ?? 'draft') }}</span></td>
-                                        <td><div class="btn-group btn-group-sm"><a href="{{ route('objectives.show', $detail) }}" class="btn btn-info"><i class="fas fa-eye"></i></a>@if($canEditObjective($detail))<a href="{{ route('objectives.edit', $detail) }}" class="btn btn-warning"><i class="fas fa-edit"></i></a>@endif</div></td>
-                                    </tr>
-                                    @endforeach
-                                    @endforeach
-                                @endif
+                                    @include('objectives.partials.hierarchy-row', ['rowObjective' => $child, 'rowParent' => $mainObj, 'depth' => 0])
                                 @endforeach
                             </tbody>
-                        </table>
+                        </table></div>
                         @else
                             <p class="text-muted text-center">No sub-objectives yet.</p>
                         @endif
@@ -424,6 +316,7 @@
             @endforeach
         </div>
         @endif
+        <div class="mt-3">{{ $objectives->withQueryString()->links() }}</div>
     </div>
 </section>
 @endsection

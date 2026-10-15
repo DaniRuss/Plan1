@@ -161,7 +161,7 @@
                                             value="{{ $obj->id }}" 
                                             data-code="{{ $obj->code }}" 
                                             data-desc="{{ $obj->description }}"
-                                            data-weight="{{ $obj->weight }}"
+                                            data-weight="{{ \App\Support\NumberFormatter::format($obj->weight) }}"
                                             data-unit="{{ $obj->unit }}"
                                             data-department="{{ $obj->department_id }}"
                                             data-performers="{{ json_encode($obj->performers ?? []) }}"
@@ -177,7 +177,7 @@
                                         <br><small class="text-muted">Includes {{ $obj->children->count() }} sub-objectives</small>
                                     @endif
                                 </td>
-                                <td>{{ $obj->weight }}</td>
+                                <td>{{ \App\Support\NumberFormatter::format($obj->weight) }}</td>
                                 <td>{{ $obj->unit }}</td>
                             </tr>
                             @foreach($obj->children as $child)
@@ -188,7 +188,7 @@
                                                 value="{{ $child->id }}" 
                                                 data-code="{{ $child->code }}" 
                                                 data-desc="{{ $child->description }}"
-                                                data-weight="{{ $child->weight }}"
+                                                data-weight="{{ \App\Support\NumberFormatter::format($child->weight) }}"
                                                 data-unit="{{ $child->unit }}"
                                                 data-department="{{ $child->department_id }}"
                                                 data-performers="{{ json_encode($child->performers ?? []) }}"
@@ -199,7 +199,7 @@
                                     </td>
                                     <td class="pl-4">{{ $child->code }}</td>
                                     <td class="pl-4">{{ $child->description }}</td>
-                                    <td>{{ $child->weight }}</td>
+                                    <td>{{ \App\Support\NumberFormatter::format($child->weight) }}</td>
                                     <td>{{ $child->unit }}</td>
                                 </tr>
                                 @foreach($child->children as $activity)
@@ -207,14 +207,14 @@
                                         <td class="text-center"><div class="custom-control custom-checkbox">
                                             <input type="checkbox" class="custom-control-input obj-checkbox" id="obj_{{ $activity->id }}"
                                                 value="{{ $activity->id }}" data-code="{{ $activity->code }}" data-desc="{{ $activity->description }}"
-                                                data-weight="{{ $activity->weight }}" data-unit="{{ $activity->unit }}"
+                                                data-weight="{{ \App\Support\NumberFormatter::format($activity->weight) }}" data-unit="{{ $activity->unit }}"
                                                 data-department="{{ $activity->department_id }}" data-performers="{{ json_encode($activity->performers ?? []) }}"
                                                 data-annual-target="{{ $activity->annual_target ?? '' }}"
                                                 data-targets="{{ json_encode($activity->only($targetFields)) }}">
                                             <label class="custom-control-label" for="obj_{{ $activity->id }}"></label>
                                         </div></td>
                                         <td class="pl-5">{{ $activity->code }}</td><td class="pl-5">{{ $activity->description }}</td>
-                                        <td>{{ $activity->weight }}</td><td>{{ $activity->unit }}</td>
+                                        <td>{{ \App\Support\NumberFormatter::format($activity->weight) }}</td><td>{{ $activity->unit }}</td>
                                     </tr>
                                 @endforeach
                             @endforeach

@@ -134,7 +134,7 @@ class OrganizationPlanWordExporter
                 $bodies = collect($item->performers ?? [])->map(fn ($id) => $departmentNames[$id] ?? null)->filter()->implode(', ');
                 $this->dataRow($table, [
                     $objective?->code, $objective?->description, $plan->department->name,
-                    $item->unit ?: $objective?->unit, ($item->weight ?: $objective?->weight).'%',
+                    $item->unit ?: $objective?->unit, \App\Support\NumberFormatter::format($item->weight ?: $objective?->weight).'%',
                     $bodies ?: $plan->department->name,
                 ]);
             }
@@ -154,9 +154,12 @@ class OrganizationPlanWordExporter
             foreach ($plan->items->sortBy(fn ($item) => $item->strategicObjective?->code) as $item) {
                 $objective = $item->strategicObjective;
                 $bodies = collect($item->performers ?? [])->map(fn ($id) => $departmentNames[$id] ?? null)->filter()->implode(', ');
-                $values = [$objective?->code, $objective?->description, $item->unit ?: $objective?->unit, $item->baseline_value ?? $objective?->baseline_value ?? '-', ($item->weight ?: $objective?->weight).'%', $item->annual_target ?? '-'];
+                $values = [$objective?->code, $objective?->description, $item->unit ?: $objective?->unit, $item->baseline_value ?? $objective?->baseline_value ?? '-', \App\Support\NumberFormatter::format($item->weight ?: $objective?->weight).'%', $item->annual_target ?? '-'];
                 foreach ($monthFields as $month) $values[] = $item->{$month.'_target'} ?? '-';
                 array_push($values, $item->q1_target ?? '-', $item->q2_target ?? '-', $item->q3_target ?? '-', $item->q4_target ?? '-', $bodies ?: $plan->department->name);
+                foreach (range(3, 21) as $numericColumn) {
+                    if (isset($values[$numericColumn]) && is_numeric($values[$numericColumn])) $values[$numericColumn] = \App\Support\NumberFormatter::format($values[$numericColumn]);
+                }
                 $this->dataRow($table, $values, 6.2);
             }
         }

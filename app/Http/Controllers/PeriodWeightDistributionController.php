@@ -52,7 +52,7 @@ class PeriodWeightDistributionController extends Controller
             if ($planned->isEmpty() || $planned->count() === $siblings->count() || $planned->count() === 1) continue;
             $required = (float)$siblings->sum(fn($item)=>$resolver->baseWeight($item));
             $assigned = (float)$planned->sum(fn($item)=>(float)($data['weights'][$item->id] ?? 0));
-            if (abs($required-$assigned) > 0.0001) $errors[] = "Group {$siblings->first()->strategicObjective->parent_id}: effective weights must total ".number_format($required,4)."; assigned ".number_format($assigned,4)."; remaining ".number_format($required-$assigned,4).'.';
+            if (abs($required-$assigned) > 0.0001) $errors[] = "Group {$siblings->first()->strategicObjective->parent_id}: effective weights must total ".\App\Support\NumberFormatter::format($required,3)."; assigned ".\App\Support\NumberFormatter::format($assigned,3)."; remaining ".\App\Support\NumberFormatter::format($required-$assigned,3).'.';
         }
         if ($errors) return back()->withInput()->withErrors(['weights'=>implode(' ', $errors)]);
 

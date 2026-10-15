@@ -121,11 +121,11 @@ class ReportPerformanceExport implements FromCollection, WithHeadings, WithMappi
                 $sheet->getStyle("M{$totalRow}:M{$totalRow}")->getFill()->setFillType('solid')->getStartColor()->setRGB(ltrim($level['hex'], '#'));
                 $sheet->getStyle("L{$levelRow}:M{$levelRow}")->getFill()->setFillType('solid')->getStartColor()->setRGB(ltrim($level['hex'], '#'));
 
-                $sheet->getStyle("G2:H{$lastDataRow}")->getNumberFormat()->setFormatCode('0.0%');
-                $sheet->getStyle("K2:K{$lastDataRow}")->getNumberFormat()->setFormatCode('0.0000');
-                $sheet->getStyle("C2:F{$lastDataRow}")->getNumberFormat()->setFormatCode('#,##0.00');
-                $sheet->getStyle("L2:M{$levelRow}")->getNumberFormat()->setFormatCode('0.0000');
-                $sheet->getStyle("M{$totalRow}")->getNumberFormat()->setFormatCode('0.00%');
+                $sheet->getStyle("G2:H{$lastDataRow}")->getNumberFormat()->setFormatCode('0.###%');
+                $sheet->getStyle("K2:K{$lastDataRow}")->getNumberFormat()->setFormatCode('0.###');
+                $sheet->getStyle("C2:F{$lastDataRow}")->getNumberFormat()->setFormatCode('#,##0.###');
+                $sheet->getStyle("L2:M{$levelRow}")->getNumberFormat()->setFormatCode('0.###');
+                $sheet->getStyle("M{$totalRow}")->getNumberFormat()->setFormatCode('0.###%');
                 $sheet->getStyle("A1:M{$levelRow}")->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN)->getColor()->setRGB('808080');
                 $sheet->getStyle("A1:M{$levelRow}")->getAlignment()->setVertical(Alignment::VERTICAL_CENTER)->setWrapText(true);
                 $sheet->getStyle("A2:A{$lastDataRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);

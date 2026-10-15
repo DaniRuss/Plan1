@@ -819,8 +819,8 @@ class WeeklyPerformanceController extends Controller
                     $row['weight'],
                     $row['unit'],
                     $row['baseline'],
-                    $row['is_reference'] ? '' : number_format((float)($row['plan'] ?? 0), 3),
-                    number_format((float)($row['actual'] ?? 0), 3),
+                    $row['is_reference'] ? '' : \App\Support\NumberFormatter::format((float)($row['plan'] ?? 0),3),
+                    \App\Support\NumberFormatter::format((float)($row['actual'] ?? 0),3),
                     $row['is_reference'] ? '' : ($row['percentage'] !== null ? round($row['percentage'], 1) . '%' : ''),
                 ]);
             }

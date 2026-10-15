@@ -67,11 +67,11 @@ class Setting extends Model
 
     public static function formatPerformanceBandRange(array $band): string
     {
-        $min = rtrim(rtrim(number_format((float) $band['min'], 2, '.', ''), '0'), '.');
+        $min = rtrim(rtrim(number_format((float) $band['min'], 3, '.', ''), '0'), '.');
         $scale = self::getPerformanceScale();
         $index = array_search($band['key'], array_column($scale, 'key'), true);
         if ($index === 0) return '≥ ' . $min . '%';
-        $upper = rtrim(rtrim(number_format((float) $scale[$index - 1]['min'], 2, '.', ''), '0'), '.');
+        $upper = rtrim(rtrim(number_format((float) $scale[$index - 1]['min'], 3, '.', ''), '0'), '.');
         return $min . '% – < ' . $upper . '%';
     }
 

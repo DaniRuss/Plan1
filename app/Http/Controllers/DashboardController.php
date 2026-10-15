@@ -152,9 +152,8 @@ class DashboardController extends Controller
 
     public function performanceComparison(Request $request)
     {
-        $analytics = $this->buildPerformanceAnalytics(auth()->user(), $request);
-
-        return view('performance.comparison', compact('analytics'));
+        $comparison = app(\App\Services\PerformanceComparison::class)->build($request->user(), $request);
+        return view('performance.comparison', compact('comparison'));
     }
 
     private function buildPerformanceAnalytics(User $user, Request $request): array

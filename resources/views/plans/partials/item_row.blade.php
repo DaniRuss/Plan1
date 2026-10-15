@@ -29,7 +29,7 @@
             <a href="{{ route('plans.objectives.download', [$plan, $objective]) }}" class="ml-2 text-danger" title="Download this objective from the approved plan"><i class="fas fa-file-pdf"></i></a>
         @endif
     </td>
-    <td>{{ $objective->weight + 0 }}%</td>
+    <td>{{ \App\Support\NumberFormatter::format($objective->weight) }}%</td>
     <td>{{ $objective->unit }}</td>
     <td style="vertical-align: middle;">
         @php

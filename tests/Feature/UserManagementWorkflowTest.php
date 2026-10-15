@@ -831,7 +831,7 @@ class UserManagementWorkflowTest extends TestCase
         $this->actingAs($expert)->get(route('daily.entry', [
             'year' => 2019, 'month' => 'july', 'week' => 1,
             'department_id' => $department->id,
-        ]))->assertOk()->assertSee('15.00');
+        ]))->assertOk()->assertSee('15');
 
         $this->actingAs($expert)->post(route('weekly.workflow', [
             'year' => 2019, 'month' => 'july', 'week' => 1,

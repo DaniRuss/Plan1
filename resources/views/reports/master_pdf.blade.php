@@ -48,10 +48,10 @@
                 <tr class="{{ $row['is_root'] ? 'root-row' : ($row['is_child'] ? 'child-row' : '') }}">
                     <td>{{ $row['code'] }}</td>
                     <td class="text-left">{{ $row['description'] }}</td>
-                    <td>{{ $row['weight'] ?: '-' }}</td>
+                    <td>{{ \App\Support\NumberFormatter::format($row['weight']) }}</td>
                     <td class="small">{{ $row['unit'] }}</td>
-                    <td>{{ $row['baseline'] }}</td>
-                    <td>{{ is_null($row['annual_target']) ? 'N/A' : number_format($row['annual_target'], 1) }}</td>
+                    <td>{{ \App\Support\NumberFormatter::format($row['baseline']) }}</td>
+                    <td>{{ is_null($row['annual_target']) ? 'N/A' : \App\Support\NumberFormatter::format($row['annual_target'],3) }}</td>
                     
                     @foreach($periodGroups as $group)
                         @foreach($group['months'] as $m)
@@ -59,7 +59,7 @@
                             <td class="text-primary">
                                 @if(!$cell['planned']) N/A
                                 @elseif(!$cell['reported']) Not Reported
-                                @else {{ $cell['is_rollup'] ? 'Roll-up' : number_format((float)$cell['actual'], 2) }}<br>{{ number_format($cell['scorecard_achievement'], 1) }}% ({{ $cell['status'] }})@if($cell['raw_achievement'] > 100)<br>Raw {{ number_format($cell['raw_achievement'], 1) }}%@endif @if(!$cell['is_rollup'] && abs((float)$cell['effective_weight'] - (float)$row['weight']) > 0.0001)<br>Eff. wt {{ number_format((float)$cell['effective_weight'], 4) }}@endif
+                                @else {{ $cell['is_rollup'] ? 'Roll-up' : \App\Support\NumberFormatter::format((float)$cell['actual'],3) }}<br>{{ \App\Support\NumberFormatter::format($cell['scorecard_achievement'],3) }}% ({{ $cell['status'] }})@if($cell['raw_achievement'] > 100)<br>Raw {{ \App\Support\NumberFormatter::format($cell['raw_achievement'],3) }}%@endif @if(!$cell['is_rollup'] && abs((float)$cell['effective_weight'] - (float)$row['weight']) > 0.0001)<br>Eff. wt {{ \App\Support\NumberFormatter::format((float)$cell['effective_weight'],3) }}@endif
                                 @endif
                             </td>
                         @endforeach
@@ -68,7 +68,7 @@
                         <td class="text-info" style="background:#e3f2fd;">
                             @if(!$cell['planned']) N/A
                             @elseif(!$cell['reported']) Not Reported
-                            @else {{ $cell['is_rollup'] ? 'Roll-up' : number_format((float)$cell['actual'], 2) }}<br>{{ number_format($cell['scorecard_achievement'], 1) }}% ({{ $cell['status'] }})@if($cell['raw_achievement'] > 100)<br>Raw {{ number_format($cell['raw_achievement'], 1) }}%@endif @if(!$cell['is_rollup'] && abs((float)$cell['effective_weight'] - (float)$row['weight']) > 0.0001)<br>Eff. wt {{ number_format((float)$cell['effective_weight'], 4) }}@endif
+                            @else {{ $cell['is_rollup'] ? 'Roll-up' : \App\Support\NumberFormatter::format((float)$cell['actual'],3) }}<br>{{ \App\Support\NumberFormatter::format($cell['scorecard_achievement'],3) }}% ({{ $cell['status'] }})@if($cell['raw_achievement'] > 100)<br>Raw {{ \App\Support\NumberFormatter::format($cell['raw_achievement'],3) }}%@endif @if(!$cell['is_rollup'] && abs((float)$cell['effective_weight'] - (float)$row['weight']) > 0.0001)<br>Eff. wt {{ \App\Support\NumberFormatter::format((float)$cell['effective_weight'],3) }}@endif
                             @endif
                         </td>
                     @endforeach

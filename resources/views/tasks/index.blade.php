@@ -47,9 +47,9 @@
                                         <td>
                                             <div class="progress progress-xs">
                                                 <div class="progress-bar bg-{{ $task->completion_percentage == 100 ? 'success' : 'primary' }}"
-                                                    style="width: {{ $task->completion_percentage }}%"></div>
+                                                    style="width: {{ \App\Support\NumberFormatter::format($task->completion_percentage) }}%"></div>
                                             </div>
-                                            <small>{{ number_format($task->completion_percentage, 0) }}%</small>
+                                            <small>{{ \App\Support\NumberFormatter::format($task->completion_percentage,3) }}%</small>
                                         </td>
                                         <td>
                                             <a href="{{ route('tasks.show', $task) }}" class="btn btn-sm btn-info">

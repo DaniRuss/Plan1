@@ -273,7 +273,7 @@
                         <div class="d-flex align-items-center justify-content-between mb-2">
                             <span class="font-weight-bold">Revenue Growth</span>
                             <span class="badge badge-{{ $revenueKpi['status'] === 'green' ? 'success' : ($revenueKpi['status'] === 'yellow' ? 'warning' : 'danger') }}" style="font-size:14px;">
-                                {{ $revenueKpi['actual'] !== null ? $revenueKpi['actual'].'%' : 'No Data' }}
+                                {{ $revenueKpi['actual'] !== null ? \App\Support\NumberFormatter::format($revenueKpi['actual']).'%' : 'No Data' }}
                             </span>
                         </div>
                         <div class="perf-bar mb-1">
@@ -329,8 +329,8 @@
                             <span class="traffic-light {{ $k['status']==='green'?'tl-green':($k['status']==='yellow'?'tl-yellow':($k['status']==='red'?'tl-red':'tl-gray')) }}" style="width:18px;height:18px;flex-shrink:0;margin-left:8px;"></span>
                         </div>
                         <div class="d-flex justify-content-between text-muted" style="font-size:11px;">
-                            <span>Actual: <strong class="text-dark">{{ $k['actual']!==null ? $k['actual'].' '.$k['unit'] : '—' }}</strong></span>
-                            <span>Target: <strong class="text-dark">{{ $k['target'].' '.$k['unit'] }}</strong></span>
+                            <span>Actual: <strong class="text-dark">{{ $k['actual']!==null ? \App\Support\NumberFormatter::format($k['actual']).' '.$k['unit'] : '—' }}</strong></span>
+                            <span>Target: <strong class="text-dark">{{ \App\Support\NumberFormatter::format($k['target']).' '.$k['unit'] }}</strong></span>
                         </div>
                         <div class="perf-bar mt-2">
                             <div class="perf-bar-fill {{ $k['status']==='green'?'bg-success':($k['status']==='yellow'?'bg-warning':'bg-danger') }}" style="width:{{ $pctCapped }}%"></div>
@@ -365,14 +365,14 @@
                     <div class="card-body">
                         <span class="badge badge-success mb-2">{{ $code }}</span>
                         <div style="font-size:28px;font-weight:700;color:{{ $k['status']==='green'?'#28a745':($k['status']==='yellow'?'#f39c12':'#dc3545') }}">
-                            {{ $k['actual']!==null ? $k['actual'] : '—' }}
+                            {{ $k['actual']!==null ? \App\Support\NumberFormatter::format($k['actual']) : '—' }}
                         </div>
                         <div class="text-muted" style="font-size:11px;">{{ $k['unit'] }}</div>
                         <div class="text-dark font-weight-bold mt-1" style="font-size:12px;">{{ $k['name'] }}</div>
                         <div class="perf-bar mt-2">
                             <div class="perf-bar-fill {{ $k['status']==='green'?'bg-success':($k['status']==='yellow'?'bg-warning':'bg-danger') }}" style="width:{{ $pctCapped }}%"></div>
                         </div>
-                        <small class="text-muted">Target: {{ $k['target'] }} | Achiev: {{ $pct !== null ? $pct.'%' : 'N/A' }}</small>
+                        <small class="text-muted">Target: {{ \App\Support\NumberFormatter::format($k['target']) }} | Achiev: {{ $pct !== null ? $pct.'%' : 'N/A' }}</small>
                     </div>
                 </div>
             </div>
@@ -403,7 +403,7 @@
                                 <p class="text-muted mb-2" style="font-size:12px;">Target: {{ $k['target'].$k['unit'] }}</p>
                             </div>
                             <div style="font-size:36px;font-weight:800;color:{{ $k['status']==='green'?'#28a745':($k['status']==='yellow'?'#f39c12':'#dc3545') }}">
-                                {{ $k['actual']!==null ? $k['actual'] : '—' }}
+                                {{ $k['actual']!==null ? \App\Support\NumberFormatter::format($k['actual']) : '—' }}
                             </div>
                         </div>
                         <div class="perf-bar"><div class="perf-bar-fill bg-danger" style="width:{{ $pctCapped }}%"></div></div>
@@ -449,7 +449,7 @@
                     <div class="card-body text-center">
                         <span class="badge badge-warning">{{ $code }}</span>
                         <div style="font-size:30px;font-weight:700;margin-top:8px;color:{{ $k['status']==='green'?'#28a745':($k['status']==='yellow'?'#e67e22':'#dc3545') }}">
-                            {{ $k['actual']!==null ? $k['actual'].' '.$k['unit'] : '—' }}
+                            {{ $k['actual']!==null ? \App\Support\NumberFormatter::format($k['actual']).' '.$k['unit'] : '—' }}
                         </div>
                         <p class="font-weight-bold" style="font-size:12px;">{{ $k['name'] }}</p>
                         <div class="perf-bar"><div class="perf-bar-fill bg-warning" style="width:{{ $pctCapped }}%"></div></div>
@@ -502,7 +502,7 @@
                     <div class="card-body">
                         <span class="badge" style="background:#6f42c1;color:#fff;">{{ $code }}</span>
                         <div style="font-size:26px;font-weight:700;margin:8px 0;color:#6f42c1;">
-                            {{ $k['actual']!==null ? $k['actual'] : '—' }}
+                            {{ $k['actual']!==null ? \App\Support\NumberFormatter::format($k['actual']) : '—' }}
                         </div>
                         <p style="font-size:11px;" class="font-weight-bold mb-1">{{ $k['name'] }}</p>
                         <div class="perf-bar"><div class="perf-bar-fill" style="background:#6f42c1;width:{{ $pctCapped }}%"></div></div>
@@ -565,8 +565,8 @@
                                 <td><span class="badge badge-light border text-muted">{{ $k['cat'] }}</span></td>
                                 <td style="font-size:12px;">{{ $k['name'] }}</td>
                                 <td><i class="fas {{ $dirIcon }}"></i></td>
-                                <td class="text-right">{{ $k['target'] }} <small class="text-muted">{{ $k['unit'] }}</small></td>
-                                <td class="text-right font-weight-bold">{{ $k['actual'] !== null ? $k['actual'] : '—' }}</td>
+                                <td class="text-right">{{ \App\Support\NumberFormatter::format($k['target']) }} <small class="text-muted">{{ $k['unit'] }}</small></td>
+                                <td class="text-right font-weight-bold">{{ $k['actual'] !== null ? \App\Support\NumberFormatter::format($k['actual']) : '—' }}</td>
                                 <td class="text-right">{{ $k['achievement'] !== null ? $k['achievement'].'%' : '—' }}@if($k['achievement'] !== null && $k['achievement'] > 100)<small class="d-block text-muted">Score: 100%</small>@endif</td>
                                 <td class="text-center"><span class="traffic-light {{ $tlCls }}" style="width:16px;height:16px;"></span><small class="d-block mt-1">{{ $k['performance_status'] }}</small></td>
                                 <td>

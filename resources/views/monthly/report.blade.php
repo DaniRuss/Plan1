@@ -168,8 +168,8 @@
                         <div>Expected weeks: <strong>{{ $completeness['expected'] }}</strong></div>
                         <div>Submitted: <strong>{{ $completeness['submitted'] }}</strong></div>
                         <div>Approved: <strong>{{ $completeness['approved'] }}</strong></div>
-                        <div>Planning coverage: <strong>{{ number_format($completeness['planning_coverage'], 1) }}%</strong></div>
-                        <div>Reporting coverage: <strong>{{ number_format($completeness['reporting_coverage'], 1) }}%</strong></div>
+                        <div>Planning coverage: <strong>{{ \App\Support\NumberFormatter::format($completeness['planning_coverage'],3) }}%</strong></div>
+                        <div>Reporting coverage: <strong>{{ \App\Support\NumberFormatter::format($completeness['reporting_coverage'],3) }}%</strong></div>
                     </div>
                     @if($completeness['status'] === 'Provisional')
                         <div class="text-warning small mt-2"><i class="fas fa-exclamation-triangle mr-1"></i>The achievement below uses final-approved weeks only and is provisional until every expected week is approved.</div>
@@ -222,15 +222,15 @@
                                             @if(!$objective->is_reference_only)<small class="d-block text-muted">Weighted child roll-up · {{ $rollup['planned_count'] ?? 0 }}/{{ $rollup['total_count'] ?? 0 }} activities planned</small>@endif
                                         </td>
                                         <td class="text-center small"><span class="badge badge-light border">Roll-up</span></td>
-                                        <td class="text-center">{{ ($rollup['weight'] ?? 0) > 0 ? number_format($rollup['weight'], 2) : 'N/A' }}</td>
+                                        <td class="text-center">{{ ($rollup['weight'] ?? 0) > 0 ? \App\Support\NumberFormatter::format($rollup['weight'],3) : 'N/A' }}</td>
                                         <td class="text-center text-muted">Roll-up</td>
                                         <td class="text-center text-primary">Roll-up</td>
                                         <td class="text-center" style="color:{{ $rollupBand['color'] }}">
-                                            {{ is_null($rollup['achievement'] ?? null) ? 'N/A' : number_format($rollup['achievement'], 1).'%' }}
-                                            @if(($rollup['raw_achievement'] ?? 0) > 100)<small class="d-block text-info">Raw: {{ number_format($rollup['raw_achievement'], 1) }}%</small>@endif
+                                            {{ is_null($rollup['achievement'] ?? null) ? 'N/A' : \App\Support\NumberFormatter::format($rollup['achievement'],3).'%' }}
+                                            @if(($rollup['raw_achievement'] ?? 0) > 100)<small class="d-block text-info">Raw: {{ \App\Support\NumberFormatter::format($rollup['raw_achievement'],3) }}%</small>@endif
                                             @if(!is_null($rollup['achievement'] ?? null))<small class="d-block">{{ $rollup['status'] }}</small>@endif
                                         </td>
-                                        <td class="text-center" style="color:{{ $rollupBand['color'] }}">{{ is_null($rollup['achievement'] ?? null) ? '-' : number_format($rollup['weighted_score'], 2) }}</td>
+                                        <td class="text-center" style="color:{{ $rollupBand['color'] }}">{{ is_null($rollup['achievement'] ?? null) ? '-' : \App\Support\NumberFormatter::format($rollup['weighted_score'],3) }}</td>
                                     </tr>
 
                                     @foreach($objective->children as $child)
@@ -273,20 +273,20 @@
                                                 @if(!$isPlanned)
                                                     <span class="badge badge-secondary">N/A</span>
                                                 @elseif(abs($weight - $baseWeight) > 0.0001)
-                                                    <small class="text-muted"><del>{{ number_format($baseWeight, 2) }}</del></small>
-                                                    <strong class="text-success ml-1">{{ number_format($weight, 2) }}</strong>
+                                                    <small class="text-muted"><del>{{ \App\Support\NumberFormatter::format($baseWeight,3) }}</del></small>
+                                                    <strong class="text-success ml-1">{{ \App\Support\NumberFormatter::format($weight,3) }}</strong>
                                                 @else
-                                                    {{ number_format($weight, 2) }}
+                                                    {{ \App\Support\NumberFormatter::format($weight,3) }}
                                                 @endif
                                             </td>
                                             <td class="text-right pr-3 font-weight-bold text-muted">
-                                                {{ $child->isTemporal() ? $child->formatTemporal($monthlyPlan) : number_format($monthlyPlan, 2) }}
+                                                {{ $child->isTemporal() ? $child->formatTemporal($monthlyPlan) : \App\Support\NumberFormatter::format($monthlyPlan,3) }}
                                             </td>
                                             <td class="text-right pr-3 font-weight-bold text-primary">
                                                 @if($child->is_reference_only)
                                                     <span class="text-muted small">N/A (REF)</span>
                                                 @else
-                                                    {{ $child->isTemporal() ? $child->formatTemporal($monthlyActual) : number_format($monthlyActual, 2) }}
+                                                    {{ $child->isTemporal() ? $child->formatTemporal($monthlyActual) : \App\Support\NumberFormatter::format($monthlyActual,3) }}
                                                 @endif
                                             </td>
                                             @php
@@ -294,16 +294,16 @@
                                             @endphp
                                             <td
                                                 class="text-center font-weight-bold" style="color: {{ $child->is_reference_only ? '#6c757d' : $childBand['color'] }};">
-                                                {{ $child->is_reference_only || !$isPlanned ? '-' : number_format($percentage, 1) . '%' }}
+                                                {{ $child->is_reference_only || !$isPlanned ? '-' : \App\Support\NumberFormatter::format($percentage,3) . '%' }}
                                                 @if(!$child->is_reference_only && $isPlanned && $rawPercentage > 100)
                                                     <small class="d-block text-primary">
-                                                        Raw: {{ number_format($rawPercentage, 1) }}%
+                                                        Raw: {{ \App\Support\NumberFormatter::format($rawPercentage,3) }}%
                                                         <span class="badge badge-info">Overachieved</span>
                                                     </small>
                                                 @endif
                                             </td>
                                             <td class="text-center font-weight-bold" style="color: {{ $child->is_reference_only ? '#6c757d' : $childBand['color'] }};">
-                                                {{ $child->is_reference_only || !$isPlanned ? '-' : number_format($weightedScore, 2) }}
+                                                {{ $child->is_reference_only || !$isPlanned ? '-' : \App\Support\NumberFormatter::format($weightedScore,3) }}
                                             </td>
                                         </tr>
 
@@ -332,18 +332,18 @@
                                                 <td class="text-center">{{ $subChild->unit }}</td>
                                                 <td class="text-center">-</td>
                                                 <td class="text-right pr-3 text-muted">
-                                                    {{ !$subIsPlanned ? 'N/A' : ($subChild->isTemporal() ? $subChild->formatTemporal($subMonthlyPlan) : number_format($subMonthlyPlan, 2)) }}
+                                                    {{ !$subIsPlanned ? 'N/A' : ($subChild->isTemporal() ? $subChild->formatTemporal($subMonthlyPlan) : \App\Support\NumberFormatter::format($subMonthlyPlan,3)) }}
                                                 </td>
                                                 <td class="text-right pr-3 text-primary">
-                                                    {{ !$subIsPlanned ? 'N/A' : ($subChild->isTemporal() ? $subChild->formatTemporal($subActual) : number_format($subActual, 2)) }}
+                                                    {{ !$subIsPlanned ? 'N/A' : ($subChild->isTemporal() ? $subChild->formatTemporal($subActual) : \App\Support\NumberFormatter::format($subActual,3)) }}
                                                 </td>
                                                 @php
                                                     $subBand = \App\Models\Setting::getPerformanceBand($subPercentage);
                                                 @endphp
                                                 <td class="text-center" style="color: {{ $subBand['color'] }};">
-                                                    {{ $subIsPlanned ? number_format($subPercentage, 1) . '%' : 'N/A' }}
+                                                    {{ $subIsPlanned ? \App\Support\NumberFormatter::format($subPercentage,3) . '%' : 'N/A' }}
                                                     @if($subIsPlanned && $subRawPercentage > 100)
-                                                        <small class="d-block text-primary">Raw: {{ number_format($subRawPercentage, 1) }}% — Overachieved</small>
+                                                        <small class="d-block text-primary">Raw: {{ \App\Support\NumberFormatter::format($subRawPercentage,3) }}% — Overachieved</small>
                                                     @endif
                                                 </td>
                                                 <td class="text-center text-muted">-</td>
@@ -362,7 +362,7 @@
                                     <td colspan="7" class="text-right py-3 pr-4">OVERALL PERFORMANCE SCORE (OUT OF 100%):
                                     </td>
                                     <td class="text-center py-3 bg-success">
-                                        {{ number_format($overallPerformanceScore, 2) }}%
+                                        {{ \App\Support\NumberFormatter::format($overallPerformanceScore,3) }}%
                                     </td>
                                 </tr>
                             </tfoot>

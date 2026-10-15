@@ -31,7 +31,7 @@
                                                 <li class="nav-item">
                                                     <a href="#" class="nav-link">
                                                         Progress <span
-                                                            class="float-right badge bg-primary">{{ number_format($task->completion_percentage, 0) }}%</span>
+                                                            class="float-right badge bg-primary">{{ \App\Support\NumberFormatter::format($task->completion_percentage,3) }}%</span>
                                                     </a>
                                                 </li>
                                                 <li class="nav-item">

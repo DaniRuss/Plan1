@@ -70,7 +70,7 @@
             <span class="info-box-icon bg-danger elevation-1"><i class="fas fa-weight-hanging"></i></span>
             <div class="info-box-content">
                 <span class="info-box-text">Org. Weight</span>
-                <span class="info-box-number">{{ $department->objective_weight }}%</span>
+                <span class="info-box-number">{{ \App\Support\NumberFormatter::format($department->objective_weight) }}%</span>
             </div>
         </div>
     </div>

@@ -29,7 +29,7 @@
                                         <div class="progress-bar bg-primary"
                                             style="width: {{ $task->completion_percentage }}%"></div>
                                     </div>
-                                    <small>{{ number_format($task->completion_percentage, 1) }}%</small>
+                                    <small>{{ \App\Support\NumberFormatter::format($task->completion_percentage,3) }}%</small>
                                 </td>
                             </tr>
                             <tr>
@@ -99,7 +99,7 @@
                                                     {{ $report->created_at->diffForHumans() }}</span>
                                                 <h3 class="timeline-header">
                                                     <strong>{{ $report->employee->first_name }}</strong> reported
-                                                    {{ $report->progress_percentage }}% progress
+                                                    {{ \App\Support\NumberFormatter::format($report->progress_percentage) }}% progress
                                                     for <strong>{{ $report->reporting_period }}</strong>
                                                 </h3>
                                                 <div class="timeline-body">
@@ -149,7 +149,7 @@
                                                                     </div>
                                                                     <div class="modal-body">
                                                                         <p>You are approving
-                                                                            <strong>{{ $report->progress_percentage }}%</strong>
+                                                                            <strong>{{ \App\Support\NumberFormatter::format($report->progress_percentage) }}%</strong>
                                                                             completion for this task.</p>
                                                                         <div class="form-group">
                                                                             <label>Comments (Optional)</label>
@@ -215,9 +215,9 @@
                                                     <label for="progress_percentage">Current Completion %</label>
                                                     <input type="number" name="progress_percentage" class="form-control"
                                                         min="{{ $task->completion_percentage }}" max="100"
-                                                        value="{{ $task->completion_percentage }}" required>
+                                                        value="{{ \App\Support\NumberFormatter::format($task->completion_percentage) }}" required>
                                                     <small class="text-muted">Must be greater than previous progress
-                                                        ({{ $task->completion_percentage }}%)</small>
+                                                        ({{ \App\Support\NumberFormatter::format($task->completion_percentage) }}%)</small>
                                                 </div>
                                             </div>
                                         </div>

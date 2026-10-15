@@ -106,7 +106,7 @@
                                     <td>{{ $item->strategicObjective->description ?? 'N/A' }}</td>
                                     <td>{{ $item->strategicObjective->unit ?? 'N/A' }}</td>
                                     <td class="text-right font-weight-bold">
-                                        {{ $isPlanned || $isCalculatedParent ? number_format($displayTarget, 2) : 'N/A' }}
+                                        {{ $isPlanned || $isCalculatedParent ? \App\Support\NumberFormatter::format($displayTarget,3) : 'N/A' }}
                                     </td>
                                     <td>
                                         <input type="number" step="any" min="0"

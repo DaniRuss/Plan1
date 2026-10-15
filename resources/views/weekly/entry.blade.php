@@ -69,7 +69,7 @@
 
             <div class="period-info bg-white p-3 rounded border shadow-sm mb-3">
                 <div class="row align-items-center">
-                    <div class="col-md-6">
+                    <div class="col-12">
                         <h5 class="m-0 font-weight-bold text-dark">
                             📅 Week {{ $week }} Performance Entry - {{ ucfirst($month) }} {{ $year }}
                             <small class="text-muted ml-2">({{ $weekInfo ? $weekInfo['start'] . ' – ' . $weekInfo['end'] : '' }})</small>
@@ -81,16 +81,6 @@
                                 <i class="fas fa-comment-dots mr-1"></i>{{ $workflowState['note'] }}
                             </div>
                         @endif
-                    </div>
-                    <div class="col-md-6 text-right">
-                        <div class="d-inline-block mr-3 border-right pr-3">
-                            <span class="text-muted small d-block">📊 Overall Progress:</span>
-                            <span class="font-weight-bold text-primary h5 m-0">67%</span>
-                        </div>
-                        <div class="d-inline-block">
-                            <span class="text-muted small d-block">⏰ Due:</span>
-                            <span class="font-weight-bold text-danger h6 m-0">Today, 5:00 PM</span>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -191,7 +181,7 @@
                                                     </div>
                                                 </td>
                                                 <td class="text-center small">{{ $child->unit }}</td>
-                                                <td class="text-right text-muted">{{ $isPlanned ? number_format($monthlyTarget, 2) : 'N/A' }}</td>
+                                                <td class="text-right text-muted">{{ $isPlanned ? \App\Support\NumberFormatter::format($monthlyTarget,3) : 'N/A' }}</td>
                                                 <td class="text-right bg-light px-2" style="width: 120px;">
                                                     <input type="number" step="any" @if(!is_null($maxAllowedPlan)) max="{{ $maxAllowedPlan }}" @endif name="entries[{{ $child->id }}][plan_value]"
                                                         class="form-control form-control-sm row-plan-input text-right font-weight-bold text-info border-0 rounded-0"
@@ -261,7 +251,7 @@
                                                 @endphp
                                                 <td
                                                     class="text-center percentage-display font-weight-bold" style="color: {{ $childBand['color'] }};">
-                                                    {{ $child->is_reference_only ? '-' : number_format($percentage, 1) . '%' }}
+                                                    {{ $child->is_reference_only ? '-' : \App\Support\NumberFormatter::format($percentage,3) . '%' }}
                                                 </td>
                                             </tr>
                                             {{-- Remarks Row for every activity --}}
@@ -306,7 +296,7 @@
                                                         </span>
                                                     </td>
                                                     <td class="text-center small">{{ $subChild->unit }}</td>
-                                                    <td class="text-right text-muted small">{{ $subIsPlanned ? number_format($subMonthlyTarget, 2) : 'N/A' }}
+                                                    <td class="text-right text-muted small">{{ $subIsPlanned ? \App\Support\NumberFormatter::format($subMonthlyTarget,3) : 'N/A' }}
                                                     </td>
                                                     <td class="text-right bg-light px-2" style="width: 100px;">
                                                         <input type="number" step="any" @if(!is_null($subMaxAllowedPlan)) max="{{ $subMaxAllowedPlan }}" @endif name="entries[{{ $subChild->id }}][plan_value]"
@@ -341,7 +331,7 @@
                                                     @endphp
                                                     <td
                                                         class="text-center percentage-display small" style="color: {{ $subBand['color'] }};">
-                                                        {{ $subChild->is_reference_only ? '-' : number_format($subPercentage, 1) . '%' }}
+                                                        {{ $subChild->is_reference_only ? '-' : \App\Support\NumberFormatter::format($subPercentage,3) . '%' }}
                                                     </td>
                                                 </tr>
                                             @endforeach
@@ -579,7 +569,7 @@
                         let days = parseFloat(row.find('.machinery-days').val()) || 0;
                         let actual = qty * time * days;
                         
-                        row.find('.machinery-actual').val(actual.toFixed(2));
+                        row.find('.machinery-actual').val(formatNumber(actual));
                         updatePercentage(row, actual);
                     });
 
@@ -591,7 +581,7 @@
                         let tone = parseFloat(row.find('.truck-tone').val()) || 0;
                         let actual = count * cycle * tone; 
                         
-                        row.find('.truck-actual').val(actual.toFixed(2));
+                        row.find('.truck-actual').val(formatNumber(actual));
                         updatePercentage(row, actual);
                     });
 
@@ -642,7 +632,7 @@
                             : (plan === 0 ? (actual >= 0 ? 100 : 0) : (actual / plan) * 100);
 
                         let display = row.find('.percentage-display');
-                        display.text(percentage.toFixed(1) + '%');
+                        display.text(formatNumber(percentage) + '%');
 
                         display.css('color', colorForPercentage(percentage));
                         if (row.data('parent-objective')) recalculateParents();
@@ -665,8 +655,8 @@
                             });
                             if (type === 'average' && children.length) { plan /= children.length; actual /= children.length; }
                             if (type === 'weighted') { plan = 100; actual = children.length ? actual / children.length : 0; }
-                            parent.find('.row-plan-input').val(plan.toFixed(2));
-                            parent.find('.performance-input').val(actual.toFixed(2));
+                            parent.find('.row-plan-input').val(formatNumber(plan));
+                            parent.find('.performance-input').val(formatNumber(actual));
                             updatePercentage(parent, actual);
                         });
                     }
@@ -714,7 +704,7 @@
 
                         // Update the main performance input
                         let mainInput = $('#input-' + activePlanItemId);
-                        mainInput.val(total.toFixed(2)).trigger('input');
+                        mainInput.val(formatNumber(total)).trigger('input');
 
                         // Store hidden inputs for station data
                         let container = mainInput.closest('td');

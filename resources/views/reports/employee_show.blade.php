@@ -161,7 +161,7 @@
                                                 {{ round($task->completion_percentage, 0) }}%</div>
                                             <div class="progress progress-xs" style="height: 5px;">
                                                 <div class="progress-bar {{ $task->completion_percentage >= 80 ? 'bg-success' : ($task->completion_percentage >= 40 ? 'bg-info' : 'bg-warning') }}"
-                                                    role="progressbar" style="width: {{ $task->completion_percentage }}%"></div>
+                                                    role="progressbar" style="width: {{ \App\Support\NumberFormatter::format($task->completion_percentage) }}%"></div>
                                             </div>
                                         </td>
                                         <td class="text-center small">

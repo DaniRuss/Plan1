@@ -113,7 +113,7 @@
                                 <div class="progress flex-grow-1" style="height:5px;border-radius:3px;background:#e9ecef">
                                     <div class="progress-bar" style="width:{{ $import->progress_percentage }}%;background:{{ $sc }};border-radius:3px"></div>
                                 </div>
-                                <small class="text-muted font-weight-bold" style="font-size:10px;min-width:30px">{{ $import->progress_percentage }}%</small>
+                                <small class="text-muted font-weight-bold" style="font-size:10px;min-width:30px">{{ \App\Support\NumberFormatter::format($import->progress_percentage) }}%</small>
                             </div>
                             <div style="font-size:10px;color:#adb5bd;margin-top:2px">Stage {{ $import->stage_number }} of 9</div>
                         </td>

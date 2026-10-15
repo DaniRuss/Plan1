@@ -24,7 +24,7 @@
                                             @foreach($planItems as $item)
                                                 <option value="{{ $item->id }}" {{ old('plan_item_id') == $item->id ? 'selected' : '' }}>
                                                     [{{ $item->plan->year }}] {{ $item->strategicObjective->title }} (Target:
-                                                    {{ $item->annual_target }})
+                                                    {{ \App\Support\NumberFormatter::format($item->annual_target) }})
                                                 </option>
                                             @endforeach
                                         </select>

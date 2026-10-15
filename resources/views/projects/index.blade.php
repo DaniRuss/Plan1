@@ -62,10 +62,10 @@
                                 <td>
                                     <div class="progress progress-xs mb-1" style="height: 4px;">
                                         <div class="progress-bar bg-{{ $project->completion_percentage >= 90 ? 'success' : ($project->completion_percentage >= 50 ? 'info' : 'warning') }}"
-                                            style="width: {{ $project->completion_percentage }}%"></div>
+                                            style="width: {{ \App\Support\NumberFormatter::format($project->completion_percentage) }}%"></div>
                                     </div>
                                     <span
-                                        class="font-weight-bold small">{{ number_format($project->completion_percentage, 1) }}%</span>
+                                        class="font-weight-bold small">{{ \App\Support\NumberFormatter::format($project->completion_percentage,3) }}%</span>
                                 </td>
                                 <td>
                                     @php

@@ -89,7 +89,7 @@
                                     @foreach($objectives as $obj)
                                         <option value="{{ $obj->id }}" 
                                             data-remaining="{{ $obj->getRemainingWeight() }}"
-                                            data-total="{{ $obj->weight }}"
+                                            data-total="{{ \App\Support\NumberFormatter::format($obj->weight) }}"
                                             data-allocated="{{ $obj->getAllocatedWeight() }}"
                                             data-calculated="{{ $obj->is_calculated_weight ? 1 : 0 }}"
                                             data-code="{{ $obj->code }}"
@@ -356,8 +356,8 @@ function updateWeightInfo() {
         var allocated = parseFloat(option.data('allocated')) || 0;
         if (parentIsCalculated) {
             var newTotal = allocated + inputWeight;
-            infoText = '<b>Automatic parent weight.</b> Current direct-child total: ' + allocated.toFixed(2)
-                + '%. After saving this child: <b>' + newTotal.toFixed(2) + '%</b>.';
+            infoText = '<b>Automatic parent weight.</b> Current direct-child total: ' + formatNumber(allocated)
+                + '%. After saving this child: <b>' + formatNumber(newTotal) + '%</b>.';
             $('#weight').removeClass('is-invalid');
             progressContainer.addClass('d-none');
             $('#weightInfo').html(infoText);
@@ -366,7 +366,7 @@ function updateWeightInfo() {
         var remaining = parseFloat(option.data('remaining'));
         var total = parseFloat(option.data('total'));
         allocated = total - remaining;
-        infoText = 'Parent Allocation: ' + total + '%. Allocated: ' + allocated.toFixed(2) + '%. <b>Remaining: ' + remaining.toFixed(2) + '%</b>.';
+        infoText = 'Parent Allocation: ' + total + '%. Allocated: ' + formatNumber(allocated) + '%. <b>Remaining: ' + formatNumber(remaining) + '%</b>.';
         if (inputWeight > remaining) {
             infoText += ' <span class="text-danger font-weight-bold ml-2"><i class="fas fa-exclamation-circle"></i> Exceeds remaining!</span>';
             $('#weight').addClass('is-invalid');

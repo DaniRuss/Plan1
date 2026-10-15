@@ -102,7 +102,7 @@ class MasterPerformanceReportTest extends TestCase
             ['plan_item_id'=>$unplannedItem->id, 'original_weight'=>0.2, 'effective_weight'=>null],
         ]);
 
-        $response = $this->actingAs($user)->get(route('reports.master', ['year'=>2019]))->assertOk()->assertSee('Eff. wt 0.8000');
+        $response = $this->actingAs($user)->get(route('reports.master', ['year'=>2019]))->assertOk()->assertSee('Eff. wt 0.8');
         $rows = collect($response->viewData('gridData'));
         $this->assertSame(0.8, $rows->firstWhere('id', $first->id)['months']['july']['effective_weight']);
         $this->assertSame(0.2, $rows->firstWhere('id', $second->id)['months']['july']['effective_weight']);

@@ -94,7 +94,7 @@ $payByType   = $import->payments->keyBy('payment_type');
                 <div class="progress flex-grow-1" style="height:6px;border-radius:4px;background:rgba(255,255,255,.2);max-width:280px">
                     <div class="progress-bar bg-white" style="width:{{ $import->progress_percentage }}%;border-radius:4px"></div>
                 </div>
-                <span class="small font-weight-bold">{{ $import->progress_percentage }}%</span>
+                <span class="small font-weight-bold">{{ \App\Support\NumberFormatter::format($import->progress_percentage) }}%</span>
             </div>
         </div>
         <div class="col-md-5 text-md-right mt-3 mt-md-0">
@@ -237,7 +237,7 @@ $payByType   = $import->payments->keyBy('payment_type');
                 </div>
             </div>
             <div class="d-flex align-items-center gap-2">
-                @if($pay->amount)<span class="small font-weight-bold">ETB {{ number_format($pay->amount,2) }}</span>@endif
+                @if($pay->amount)<span class="small font-weight-bold">ETB {{ \App\Support\NumberFormatter::format($pay->amount,3) }}</span>@endif
                 @if($pay->status === 'paid')
                     <span class="badge badge-success px-2">Paid</span>
                 @else

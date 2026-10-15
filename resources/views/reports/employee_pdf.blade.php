@@ -155,7 +155,7 @@
                                 {{ $task->status }}
                             </span>
                         </td>
-                        <td class="text-center">{{ $task->completion_percentage }}%</td>
+                        <td class="text-center">{{ \App\Support\NumberFormatter::format($task->completion_percentage) }}%</td>
                         <td class="text-center">{{ $task->due_date ? date('Y-m-d', strtotime($task->due_date)) : '-' }}</td>
                     </tr>
                 @endforeach

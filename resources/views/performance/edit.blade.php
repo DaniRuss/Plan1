@@ -71,7 +71,7 @@
                                         <td><strong>{{ $item->strategicObjective->code }}</strong></td>
                                         <td>{{ \Illuminate\Support\Str::limit($item->strategicObjective->description, 60) }}
                                         </td>
-                                        <td class="text-right">{{ $isPlanned ? number_format((float)$target, 2) : 'N/A' }}</td>
+                                        <td class="text-right">{{ $isPlanned ? \App\Support\NumberFormatter::format((float)$target,3) : 'N/A' }}</td>
                                         <td>
                                             <input type="number" step="any" min="0" name="performances[{{ $item->id }}]"
                                                 value="{{ $actual }}" class="form-control form-control-sm text-right"
@@ -89,8 +89,8 @@
                                                     $status = app(\App\Services\EdrPerformanceCalculator::class)->performanceStatus($rawProgress);
                                                     $badge = $status === 'Overachieved' ? 'info' : ($status === 'Achieved' ? 'success' : 'warning');
                                                 @endphp
-                                                <span class="badge badge-{{ $badge }}">{{ number_format($progress, 1) }}% · {{ $status }}</span>
-                                                @if($rawProgress > 100)<small class="d-block text-info">Raw {{ number_format($rawProgress, 1) }}%</small>@endif
+                                                <span class="badge badge-{{ $badge }}">{{ \App\Support\NumberFormatter::format($progress,3) }}% · {{ $status }}</span>
+                                                @if($rawProgress > 100)<small class="d-block text-info">Raw {{ \App\Support\NumberFormatter::format($rawProgress,3) }}%</small>@endif
                                             @elseif(!$isPlanned)
                                                 <span class="badge badge-secondary">Not Planned (N/A)</span>
                                             @else

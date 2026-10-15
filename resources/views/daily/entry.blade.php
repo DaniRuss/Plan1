@@ -174,7 +174,7 @@
                                                 <div class="font-weight-bold text-wrap">{{ optional($item->strategicObjective)->description }}</div>
                                                 <div class="d-flex justify-content-between">
                                                     <small class="text-muted">{{ $item->unit }}</small>
-                                                    <small class="text-info">Month Target: {{ $isPlanned ? number_format($monthTarget, 2) : 'N/A' }}</small>
+                                                    <small class="text-info">Month Target: {{ $isPlanned ? \App\Support\NumberFormatter::format($monthTarget,3) : 'N/A' }}</small>
                                                 </div>
                                             </td>
                                             <td class="p-1 align-middle bg-light-info">
@@ -203,7 +203,7 @@
                                             @endforeach
                                             <td class="text-center align-middle bg-light font-weight-bold">
                                                 <span id="total-{{ $item->id }}" class="item-total">
-                                                    {{ number_format($totalActual, 2, '.', '') }}
+                                                    {{ \App\Support\NumberFormatter::format($totalActual,3, '.', '') }}
                                                 </span>
                                             </td>
                                             @php
@@ -211,7 +211,7 @@
                                             @endphp
                                             <td class="text-center align-middle font-weight-bold percentage-display" style="color: {{ $band['color'] }};">
                                                 <span id="percent-{{ $item->id }}">
-                                                    {{ number_format($percentage, 1) }}%
+                                                    {{ \App\Support\NumberFormatter::format($percentage,3) }}%
                                                 </span>
                                             </td>
                                         </tr>
@@ -269,9 +269,9 @@
                 ? (totalActual <= 0 ? 100 : (planValue / totalActual) * 100)
                 : (planValue === 0 ? (totalActual >= 0 ? 100 : 0) : (totalActual / planValue) * 100);
             
-            $(`#total-${itemId}`).text(totalActual.toFixed(2));
+            $(`#total-${itemId}`).text(formatNumber(totalActual));
             const percentDisplay = $(`#percent-${itemId}`);
-            percentDisplay.text(percentage.toFixed(1) + '%');
+            percentDisplay.text(formatNumber(percentage) + '%');
             
             const displayTd = percentDisplay.closest('td');
             displayTd.css('color', colorForPercentage(percentage));

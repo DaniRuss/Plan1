@@ -32,7 +32,7 @@
    <div><span class="kpi-ring"><strong>{{is_null($performanceAnalytics['average'])?'—':$performanceAnalytics['average'].'%'}}</strong></span><small>Average reviewed achievement</small></div>
    <div><i class="fas fa-chart-area text-info"></i><strong>{{$performanceAnalytics['officialRecords']}}</strong><small>Official records</small></div>
    <div><i class="fas fa-layer-group text-primary"></i><strong>{{$performanceAnalytics['submittedRecords']}}</strong><small>Reported records</small></div>
-   <div><i class="fas fa-check-double text-success"></i><strong>{{$performanceAnalytics['coverage']}}%</strong><small>Review coverage</small></div>
+   <div><i class="fas fa-check-double text-success"></i><strong>{{ \App\Support\NumberFormatter::format($performanceAnalytics['coverage']) }}%</strong><small>Review coverage</small></div>
   </div>
   @if($performanceAnalytics['hasData'])
   <div class="analytics-grid mt-3">

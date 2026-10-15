@@ -48,7 +48,7 @@ class ReportPerformanceExportTest extends TestCase
         ])->render();
         $this->assertStringContainsString('TOTAL EDR ACHIEVEMENT', $html);
         $this->assertStringContainsString('#FFC000', $html);
-        $this->assertStringContainsString('125.0%', $html);
+        $this->assertStringContainsString('125%', $html);
         $this->assertStringContainsString('Overachieved', $html);
 
         $row['is_planned'] = false;

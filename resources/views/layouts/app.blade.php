@@ -15,6 +15,8 @@
 <html lang="en">
 
 <head>
+    <script src="{{ asset('js/number-format.js') }}"></script>
+    @include('layouts.favicon')
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>@yield('title') | {{ \App\Models\Setting::get('site_name', 'IPRPMS') }}</title>

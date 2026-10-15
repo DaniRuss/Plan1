@@ -133,7 +133,7 @@
                     <div class="col-md-4">
                         <div class="p-2 bg-light rounded text-center">
                             <div class="small text-muted text-uppercase mb-1">Weight</div>
-                            <div class="font-weight-bold">{{ $cargo->weight ? $cargo->weight . ' Tons' : '—' }}</div>
+                            <div class="font-weight-bold">{{ $cargo->weight ? \App\Support\NumberFormatter::format($cargo->weight) . ' Tons' : '—' }}</div>
                         </div>
                     </div>
                     <div class="col-md-4">

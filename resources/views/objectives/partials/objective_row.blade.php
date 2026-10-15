@@ -8,9 +8,9 @@
             <span class="badge ml-2" style="background:#7c3aed;color:#fff">Department Added</span>
         @endif
     </td>
-    <td>{{ $objective->weight + 0 }}%</td> <!-- +0 removes trailing zeros -->
-    <td>{{ $objective->baseline_value }} ({{ $objective->baseline_year }})</td>
-    <td>{{ $objective->annual_target }} {{ $objective->unit }}</td>
+    <td>{{ \App\Support\NumberFormatter::format($objective->weight) }}%</td> <!-- +0 removes trailing zeros -->
+    <td>{{ \App\Support\NumberFormatter::format($objective->baseline_value) }} ({{ $objective->baseline_year }})</td>
+    <td>{{ \App\Support\NumberFormatter::format($objective->annual_target) }} {{ $objective->unit }}</td>
     <td>
         @if($objective->department)
             {{ $objective->department->code ?? $objective->department->name }}

@@ -60,7 +60,7 @@
                 <div class="col-xl-3 col-6 mb-2"><div class="summary-card"><i class="fas fa-bullseye text-primary"></i><span><strong>{{ $summary['objectives'] }}</strong><small>Reported objectives</small></span></div></div>
                 <div class="col-xl-3 col-6 mb-2"><div class="summary-card"><i class="fas fa-building text-info"></i><span><strong>{{ $summary['performers'] }}</strong><small>Performing departments</small></span></div></div>
                 <div class="col-xl-3 col-6 mb-2"><div class="summary-card"><i class="fas fa-check-double text-success"></i><span><strong>{{ $summary['reported_periods'] }}/{{ $summary['planned_periods'] }}</strong><small>Approved periods</small></span></div></div>
-                <div class="col-xl-3 col-6 mb-2"><div class="summary-card"><i class="fas fa-chart-pie text-warning"></i><span><strong>{{ number_format($summary['coverage'], 1) }}%</strong><small>Official reporting coverage</small></span></div></div>
+                <div class="col-xl-3 col-6 mb-2"><div class="summary-card"><i class="fas fa-chart-pie text-warning"></i><span><strong>{{ \App\Support\NumberFormatter::format($summary['coverage'],3) }}%</strong><small>Official reporting coverage</small></span></div></div>
             </div>
             @if($summary['coverage'] < 100)
                 <div class="provisional-banner mb-3"><i class="fas fa-info-circle"></i><div><strong>Provisional report</strong><span>Only Head Office-approved results are shown. Reporting coverage is incomplete for the selected plan year.</span></div></div>
@@ -117,18 +117,18 @@
                                             @if($row['is_leaf'] && !$row['is_root']) <span class="ml-3"></span> <i class="far fa-dot-circle text-xs text-muted mr-1"></i> @endif
                                             {{ $row['description'] }}
                                         </td>
-                                        <td class="text-center">{{ $row['weight'] ?: '-' }}</td>
+                                        <td class="text-center">{{ \App\Support\NumberFormatter::format($row['weight']) }}</td>
                                         <td class="text-center small">{{ $row['unit'] }}</td>
-                                        <td class="text-center">{{ $row['baseline'] }}</td>
-                                        <td class="text-center font-weight-bold">{{ is_null($row['annual_target']) ? 'N/A' : number_format($row['annual_target'], 1) }}</td>
+                                        <td class="text-center">{{ \App\Support\NumberFormatter::format($row['baseline']) }}</td>
+                                        <td class="text-center font-weight-bold">{{ is_null($row['annual_target']) ? 'N/A' : \App\Support\NumberFormatter::format($row['annual_target'],3) }}</td>
                                         
                                         @foreach($periodGroups as $group)
                                             @foreach($group['months'] as $m)
                                                 @php($cell = $row['months'][$m])
                                                 <td class="text-right pr-1 small text-muted border-right-0">
-                                                    {{ !$cell['planned'] ? 'N/A' : ($cell['is_rollup'] ? 'Roll-up' : number_format((float)$cell['target'], 2)) }}
+                                                    {{ !$cell['planned'] ? 'N/A' : ($cell['is_rollup'] ? 'Roll-up' : \App\Support\NumberFormatter::format((float)$cell['target'],3)) }}
                                                     @if($cell['planned'] && !$cell['is_rollup'] && abs((float)$cell['effective_weight'] - (float)$row['weight']) > 0.0001)
-                                                        <small class="d-block text-info">Eff. wt {{ number_format((float)$cell['effective_weight'], 4) }}</small>
+                                                        <small class="d-block text-info">Eff. wt {{ \App\Support\NumberFormatter::format((float)$cell['effective_weight'],3) }}</small>
                                                     @endif
                                                 </td>
                                                 <td class="text-center px-1 small font-weight-bold {{ $cell['reported'] ? 'approved-actual' : 'text-muted unreported' }}">
@@ -137,29 +137,29 @@
                                                     @elseif(!$cell['reported'])
                                                         <span class="badge badge-light border">Not Reported</span>
                                                     @else
-                                                        <div class="text-primary">{{ $cell['is_rollup'] ? 'Roll-up' : number_format((float)$cell['actual'], 2) }}</div>
-                                                        <div class="score-chip" style="background:{{ $cell['level']['hex'] }};color:{{ $cell['level']['textHex'] }}">{{ number_format($cell['scorecard_achievement'], 1) }}%</div>
-                                                        @if($cell['raw_achievement'] > 100)<small class="d-block text-info">Raw {{ number_format($cell['raw_achievement'], 1) }}%</small>@endif
-                                                        @if(($cell['coverage'] ?? 100) < 100)<small class="d-block text-warning">{{ number_format($cell['coverage'], 0) }}% covered</small>@endif
+                                                        <div class="text-primary">{{ $cell['is_rollup'] ? 'Roll-up' : \App\Support\NumberFormatter::format((float)$cell['actual'],3) }}</div>
+                                                        <div class="score-chip" style="background:{{ $cell['level']['hex'] }};color:{{ $cell['level']['textHex'] }}">{{ \App\Support\NumberFormatter::format($cell['scorecard_achievement'],3) }}%</div>
+                                                        @if($cell['raw_achievement'] > 100)<small class="d-block text-info">Raw {{ \App\Support\NumberFormatter::format($cell['raw_achievement'],3) }}%</small>@endif
+                                                        @if(($cell['coverage'] ?? 100) < 100)<small class="d-block text-warning">{{ \App\Support\NumberFormatter::format($cell['coverage'],3) }}% covered</small>@endif
                                                     @endif
                                                 </td>
                                             @endforeach
                                             @php($q = $group['quarter'])
                                             @php($cell = $row['quarters'][$q])
                                             <td class="text-right pr-1 small text-muted border-right-0 bg-info-light">
-                                                {{ !$cell['planned'] ? 'N/A' : ($cell['is_rollup'] ? 'Roll-up' : number_format((float)$cell['target'], 2)) }}
+                                                {{ !$cell['planned'] ? 'N/A' : ($cell['is_rollup'] ? 'Roll-up' : \App\Support\NumberFormatter::format((float)$cell['target'],3)) }}
                                                 @if($cell['planned'] && !$cell['is_rollup'] && abs((float)$cell['effective_weight'] - (float)$row['weight']) > 0.0001)
-                                                    <small class="d-block text-info">Eff. wt {{ number_format((float)$cell['effective_weight'], 4) }}</small>
+                                                    <small class="d-block text-info">Eff. wt {{ \App\Support\NumberFormatter::format((float)$cell['effective_weight'],3) }}</small>
                                                 @endif
                                             </td>
                                             <td class="text-center px-1 small font-weight-bold bg-info-light">
                                                 @if(!$cell['planned'])<span class="badge badge-secondary">N/A</span>
                                                 @elseif(!$cell['reported'])<span class="badge badge-light border">Not Reported</span>
                                                 @else
-                                                    <div class="text-info">{{ $cell['is_rollup'] ? 'Roll-up' : number_format((float)$cell['actual'], 2) }}</div>
-                                                    <div class="score-chip" style="background:{{ $cell['level']['hex'] }};color:{{ $cell['level']['textHex'] }}">{{ number_format($cell['scorecard_achievement'], 1) }}%</div>
-                                                    @if($cell['raw_achievement'] > 100)<small class="d-block text-info">Raw {{ number_format($cell['raw_achievement'], 1) }}%</small>@endif
-                                                    @if(($cell['coverage'] ?? 100) < 100)<small class="d-block text-warning">{{ number_format($cell['coverage'], 0) }}% covered</small>@endif
+                                                    <div class="text-info">{{ $cell['is_rollup'] ? 'Roll-up' : \App\Support\NumberFormatter::format((float)$cell['actual'],3) }}</div>
+                                                    <div class="score-chip" style="background:{{ $cell['level']['hex'] }};color:{{ $cell['level']['textHex'] }}">{{ \App\Support\NumberFormatter::format($cell['scorecard_achievement'],3) }}%</div>
+                                                    @if($cell['raw_achievement'] > 100)<small class="d-block text-info">Raw {{ \App\Support\NumberFormatter::format($cell['raw_achievement'],3) }}%</small>@endif
+                                                    @if(($cell['coverage'] ?? 100) < 100)<small class="d-block text-warning">{{ \App\Support\NumberFormatter::format($cell['coverage'],3) }}% covered</small>@endif
                                                 @endif
                                             </td>
                                         @endforeach

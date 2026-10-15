@@ -237,7 +237,7 @@
                                 $avgBand = \App\Models\Setting::getPerformanceBand($avgPct);
                             @endphp
                             <span class="h4 font-weight-bold" style="color: {{ $avgBand['color'] }};">
-                                {{ round($avgPct, 1) }}%
+                                {{ \App\Support\NumberFormatter::format($avgPct) }}%
                             </span>
                             <div class="small text-muted">Overall Average</div>
                         @endif
@@ -273,21 +273,21 @@
                                 <tr class="{{ $rowCls }}" @if($row['is_reference']) style="background-color: {{ $referenceBg }} !important; color: {{ $referenceText }};" @endif>
                                     <td class="text-center">{{ $row['sno'] }}</td>
                                     <td class="{{ $indentCls }}">{{ $row['label'] }}</td>
-                                    <td class="text-center">{{ $row['weight'] }}</td>
+                                    <td class="text-center">{{ \App\Support\NumberFormatter::format($row['weight']) }}</td>
                                     <td class="text-center">{{ $row['unit'] }}</td>
-                                    <td class="text-right">{{ $row['baseline'] !== null ? number_format((float)$row['baseline'], 2) : '0' }}</td>
+                                    <td class="text-right">{{ $row['baseline'] !== null ? \App\Support\NumberFormatter::format((float)$row['baseline'],3) : '0' }}</td>
 
                                     {{-- Plan Column --}}
                                     <td class="text-right">
                                         @if(!$row['is_reference'] && $row['plan'] !== null)
-                                            {{ number_format((float)$row['plan'], 3) }}
+                                            {{ \App\Support\NumberFormatter::format((float)$row['plan'],3) }}
                                         @endif
                                     </td>
 
                                     {{-- Actual Column --}}
                                     <td class="text-right {{ $row['actual'] ? 'font-weight-bold' : 'text-muted' }}">
                                         @if($row['actual'] !== null)
-                                            {{ number_format((float)$row['actual'], 3) }}
+                                            {{ \App\Support\NumberFormatter::format((float)$row['actual'],3) }}
                                         @else
                                             <span class="text-muted">—</span>
                                         @endif
@@ -298,7 +298,7 @@
                                         @if(!$row['is_reference'] && $pct !== null)
                                             <span class="badge badge-achievement font-weight-bold"
                                                   style="font-size: 0.85em; background: {{ $band['color'] }}; color: #fff;">
-                                                {{ round($pct, 1) }}
+                                                {{ \App\Support\NumberFormatter::format($pct) }}
                                             </span>
                                         @endif
                                     </td>
@@ -326,7 +326,7 @@
                                         @endphp
                                         <span class="badge badge-achievement"
                                               style="font-size: 1em; background: {{ $avgFooterBand['color'] }}; color: #fff;">
-                                            {{ round($avgPct, 1) }}%
+                                            {{ \App\Support\NumberFormatter::format($avgPct) }}%
                                         </span>
                                     </td>
                                 </tr>

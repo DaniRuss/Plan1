@@ -176,7 +176,8 @@ class StrategicObjectiveController extends Controller
             'Unauthorized access to this objective.'
         );
 
-        $objective->load(['department', 'parent', 'children', 'lastEditor']);
+        $objective->load(['department', 'leadDepartment', 'parent', 'children', 'lastEditor']);
+        $performingDepartments = Department::whereIn('id', $objective->performers ?? [])->orderBy('name')->get(['id', 'name']);
         $revisionHistory = \App\Models\AuditLog::with('user')
             ->where('model_type', StrategicObjective::class)
             ->where('model_id', $objective->id)
@@ -190,7 +191,7 @@ class StrategicObjectiveController extends Controller
                 return $log;
             });
 
-        return view('objectives.show', compact('objective', 'revisionHistory'));
+        return view('objectives.show', compact('objective', 'revisionHistory', 'performingDepartments'));
     }
 
     public function edit(StrategicObjective $objective)

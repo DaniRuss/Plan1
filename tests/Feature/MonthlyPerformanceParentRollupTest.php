@@ -130,8 +130,8 @@ class MonthlyPerformanceParentRollupTest extends TestCase
             ->assertSee('Weighted child roll-up')
             ->assertSee('Lower is better')
             ->assertSee('Higher is better')
-            ->assertSee('Raw: 250.0%', false)
-            ->assertSee('60.0%');
+            ->assertSee('Raw: 250%', false)
+            ->assertSee('60%');
 
         $this->actingAs($user)->get(route('reports.kpi-dashboard', [
             'year' => 2019,

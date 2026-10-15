@@ -11,7 +11,7 @@
 <div class="row mb-4">
     <div class="col-md-8">
         <h3 class="text-dark"><i class="fas fa-building mr-2 text-primary"></i> Organizational Units</h3>
-        <p class="text-muted">Manage your departments, their hierarchy, and strategic weights.</p>
+        <p class="text-muted">Manage departments, reporting types, and strategic weights.</p>
     </div>
     <div class="col-md-4 text-right">
         <a href="{{ route('departments.create') }}" class="btn btn-primary shadow-sm">
@@ -28,7 +28,7 @@
                     <tr>
                         <th class="px-4">Department Name</th>
                         <th>Code</th>
-                        <th>Parent</th>
+                        <th>Reporting Type</th>
                         <th>Weight</th>
                         <th>Status</th>
                         <th class="text-right px-4">Actions</th>
@@ -44,23 +44,18 @@
                                 </div>
                                 <div>
                                     <h6 class="mb-0 font-weight-bold">{{ $dept->name }}</h6>
-                                    <span class="text-muted small">ID: #{{ str_pad($dept->id, 3, '0', STR_PAD_LEFT) }}</span>
                                 </div>
                             </div>
                         </td>
                         <td><span class="badge badge-light border">{{ $dept->code ?? 'N/A' }}</span></td>
                         <td>
-                            @if($dept->parent)
-                                <span class="text-info"><i class="fas fa-level-up-alt fa-rotate-90 mr-1"></i> {{ $dept->parent->name }}</span>
-                            @else
-                                <span class="text-muted italic">Top Level</span>
-                            @endif
+                            <span class="badge badge-light border">{{ ['daily' => 'Daily', 'weekly' => 'Weekly', 'monthly' => 'Monthly'][$dept->reporting_type] ?? 'Not configured' }}</span>
                         </td>
                         <td>
                             <div class="progress progress-xs mb-1" style="width: 60px;">
                                 <div class="progress-bar bg-primary" style="width: {{ $dept->objective_weight }}%"></div>
                             </div>
-                            <span class="small font-weight-bold">{{ $dept->objective_weight }}%</span>
+                            <span class="small font-weight-bold">{{ \App\Support\NumberFormatter::format($dept->objective_weight) }}%</span>
                         </td>
                         <td>
                             <span class="badge {{ $dept->is_active ? 'badge-success' : 'badge-danger' }} badge-pill">

@@ -17,14 +17,14 @@
   @endif
   @foreach($groups as $groupKey=>$siblings)
    @php($target=$period.'_target') @php($planned=$siblings->filter(fn($item)=>$item->getAttribute($target)!==null)) @php($groupTotal=$siblings->sum(fn($item)=>app(\App\Services\PeriodWeightNormalizer::class)->baseWeight($item))) @php($plannedOriginal=$planned->sum(fn($item)=>app(\App\Services\PeriodWeightNormalizer::class)->baseWeight($item)))
-   <div class="card card-outline card-info mb-3"><div class="card-header d-flex justify-content-between"><strong>Sibling Group {{$groupKey}}</strong><span>Total: {{number_format($groupTotal,4)}} · Planned original: {{number_format($plannedOriginal,4)}} · Available: {{number_format($groupTotal-$plannedOriginal,4)}}</span></div>
+   <div class="card card-outline card-info mb-3"><div class="card-header d-flex justify-content-between"><strong>Sibling Group {{$groupKey}}</strong><span>Total: {{\App\Support\NumberFormatter::format($groupTotal,3)}} · Planned original: {{\App\Support\NumberFormatter::format($plannedOriginal,3)}} · Available: {{\App\Support\NumberFormatter::format($groupTotal-$plannedOriginal,3)}}</span></div>
    <div class="table-responsive"><table class="table table-sm table-bordered mb-0"><thead class="thead-light"><tr><th>Code</th><th>Activity</th><th>Period target</th><th>Original weight</th><th>Effective {{$period}} weight</th></tr></thead><tbody>
    @foreach($siblings as $item) @php($isPlanned=$item->getAttribute($target)!==null) @php($base=app(\App\Services\PeriodWeightNormalizer::class)->baseWeight($item)) @php($auto=$isPlanned&&$planned->count()===$siblings->count()?$base:($isPlanned&&$planned->count()===1?$groupTotal:null))
-    <tr class="{{$isPlanned?'':'text-muted bg-light'}}"><td>{{$item->strategicObjective->code}}</td><td>{{$item->strategicObjective->description}}</td><td>{{$isPlanned?$item->getAttribute($target):'N/A'}}</td><td>{{number_format($base,4)}}</td><td>@if(!$isPlanned)<span class="badge badge-secondary">N/A</span>@elseif($auto!==null)<input class="form-control form-control-sm" value="{{number_format($auto,4,'.','')}}" disabled><input type="hidden" name="weights[{{$item->id}}]" value="{{$auto}}">@else<input type="number" step="0.0001" min="0" max="{{$groupTotal}}" name="weights[{{$item->id}}]" value="{{old('weights.'.$item->id,$existing->get($item->id)?->effective_weight)}}" class="form-control form-control-sm" required @disabled(!in_array($distribution->status,['draft','returned']))>@endif</td></tr>
+    <tr class="{{$isPlanned?'':'text-muted bg-light'}}"><td>{{$item->strategicObjective->code}}</td><td>{{$item->strategicObjective->description}}</td><td>{{$isPlanned?$item->getAttribute($target):'N/A'}}</td><td>{{\App\Support\NumberFormatter::format($base,3)}}</td><td>@if(!$isPlanned)<span class="badge badge-secondary">N/A</span>@elseif($auto!==null)<input class="form-control form-control-sm" value="{{\App\Support\NumberFormatter::format($auto,3,'.','')}}" disabled><input type="hidden" name="weights[{{$item->id}}]" value="{{$auto}}">@else<input type="number" step="0.0001" min="0" max="{{$groupTotal}}" name="weights[{{$item->id}}]" value="{{old('weights.'.$item->id,$existing->get($item->id)?->effective_weight)}}" class="form-control form-control-sm" required @disabled(!in_array($distribution->status,['draft','returned']))>@endif</td></tr>
    @endforeach</tbody></table></div>
    <div class="weight-balance border-top px-3 py-2 d-flex flex-wrap justify-content-end align-items-center" data-total="{{$groupTotal}}">
     <span class="mr-3"><strong>Assigned:</strong> <span class="assigned-weight">0.0000</span></span>
-    <span class="mr-3"><strong>Remaining:</strong> <span class="remaining-weight">{{number_format($groupTotal,4)}}</span></span>
+    <span class="mr-3"><strong>Remaining:</strong> <span class="remaining-weight">{{\App\Support\NumberFormatter::format($groupTotal,3)}}</span></span>
     <span class="badge balance-status badge-warning">Allocation incomplete</span>
    </div></div>
   @endforeach
@@ -61,8 +61,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
             const remaining = total - assigned;
             const balanced = Math.abs(remaining) <= tolerance;
-            assignedOutput.textContent = assigned.toFixed(4);
-            remainingOutput.textContent = (balanced ? 0 : remaining).toFixed(4);
+            assignedOutput.textContent = formatNumber(assigned);
+            remainingOutput.textContent = formatNumber(balanced ? 0 : remaining);
             remainingOutput.classList.toggle('text-danger', !balanced);
             remainingOutput.classList.toggle('text-success', balanced);
             status.textContent = balanced ? 'Balanced — ready to submit' : (remaining < 0 ? 'Over-allocated' : 'Allocation incomplete');

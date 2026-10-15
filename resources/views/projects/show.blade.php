@@ -42,7 +42,7 @@
 
                     <div class="mb-3">
                         <label class="small font-weight-bold text-uppercase text-muted d-block">Total Budget</label>
-                        <h5 class="font-weight-bold">{{ number_format($project->total_budget, 2) }} {{ $project->currency }}</h5>
+                        <h5 class="font-weight-bold">{{ \App\Support\NumberFormatter::format($project->total_budget,3) }} {{ $project->currency }}</h5>
                     </div>
 
                     <div class="mb-0">
@@ -71,8 +71,8 @@
                     <div class="progress mb-3" style="height: 25px; border-radius: 15px;">
                         <div class="progress-bar progress-bar-striped progress-bar-animated bg-success" 
                              role="progressbar" style="width: {{ $project->completion_percentage }}%;" 
-                             aria-valuenow="{{ $project->completion_percentage }}" aria-valuemin="0" aria-valuemax="100">
-                            {{ $project->completion_percentage }}%
+                             aria-valuenow="{{ \App\Support\NumberFormatter::format($project->completion_percentage) }}" aria-valuemin="0" aria-valuemax="100">
+                            {{ \App\Support\NumberFormatter::format($project->completion_percentage) }}%
                         </div>
                     </div>
                     <p class="small text-muted mb-0">
@@ -116,13 +116,13 @@
                                             <small class="text-muted d-block">{{ Str::limit($milestone->description, 50) }}</small>
                                         </td>
                                         <td>{{ $milestone->due_date->format('M d, Y') }}</td>
-                                        <td>{{ $milestone->weight }}</td>
+                                        <td>{{ \App\Support\NumberFormatter::format($milestone->weight) }}</td>
                                         <td>
                                             <div class="d-flex align-items-center">
                                                 <div class="progress flex-grow-1 mr-2" style="height: 6px;">
                                                     <div class="progress-bar bg-info" style="width: {{ $milestone->completion_percentage }}%"></div>
                                                 </div>
-                                                <small>{{ $milestone->completion_percentage }}%</small>
+                                                <small>{{ \App\Support\NumberFormatter::format($milestone->completion_percentage) }}%</small>
                                             </div>
                                         </td>
                                         <td>
@@ -143,9 +143,9 @@
                                                     data-title="{{ $milestone->title }}"
                                                     data-desc="{{ $milestone->description }}"
                                                     data-date="{{ $milestone->due_date->format('Y-m-d') }}"
-                                                    data-progress="{{ $milestone->completion_percentage }}"
+                                                    data-progress="{{ \App\Support\NumberFormatter::format($milestone->completion_percentage) }}"
                                                     data-status="{{ $milestone->status }}"
-                                                    data-weight="{{ $milestone->weight }}"
+                                                    data-weight="{{ \App\Support\NumberFormatter::format($milestone->weight) }}"
                                                     data-toggle="modal" data-target="#editMilestoneModal">
                                                 <i class="fas fa-edit"></i>
                                             </button>

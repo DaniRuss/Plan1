@@ -57,7 +57,7 @@
                         <span class="info-box-icon bg-info"><i class="fas fa-chart-line"></i></span>
                         <div class="info-box-content">
                             <span class="info-box-text">Avg. Completion</span>
-                            <span class="info-box-number h4">{{ number_format($stats['avg_completion'], 1) }}%</span>
+                            <span class="info-box-number h4">{{ \App\Support\NumberFormatter::format($stats['avg_completion'],3) }}%</span>
                         </div>
                     </div>
                 </div>
@@ -106,10 +106,10 @@
                                             <td class="align-middle">
                                                 <div class="progress progress-xs mb-1" style="height: 6px;">
                                                     <div class="progress-bar bg-{{ $project->completion_percentage >= 90 ? 'success' : ($project->completion_percentage >= 50 ? 'primary' : 'warning') }}"
-                                                        style="width: {{ $project->completion_percentage }}%"></div>
+                                                        style="width: {{ \App\Support\NumberFormatter::format($project->completion_percentage) }}%"></div>
                                                 </div>
                                                 <span
-                                                    class="small font-weight-bold">{{ number_format($project->completion_percentage, 1) }}%</span>
+                                                    class="small font-weight-bold">{{ \App\Support\NumberFormatter::format($project->completion_percentage,3) }}%</span>
                                             </td>
                                             <td class="align-middle text-center">
                                                 @php

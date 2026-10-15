@@ -62,7 +62,7 @@
                 <span class="info-box-icon"><i class="fas fa-trophy"></i></span>
                 <div class="info-box-content">
                     <span class="info-box-text font-weight-bold">Achievement Score</span>
-                    <span class="info-box-number text-xl">{{ number_format($deptScore, 2) }}%</span>
+                    <span class="info-box-number text-xl">{{ \App\Support\NumberFormatter::format($deptScore,3) }}%</span>
                     <div class="progress" style="height: 4px;">
                         <div class="progress-bar" style="width: {{ $deptScore }}%"></div>
                     </div>
@@ -159,30 +159,30 @@
                                     @if(!$isPlanned || is_null($weight))
                                         N/A
                                     @elseif(abs((float)$weight - $baseWeight) > 0.0001)
-                                        <small class="d-block text-muted"><del>{{ number_format($baseWeight, 4) }}</del></small>
-                                        <span class="text-info">{{ number_format((float)$weight, 4) }}%</span>
+                                        <small class="d-block text-muted"><del>{{ \App\Support\NumberFormatter::format($baseWeight,3) }}</del></small>
+                                        <span class="text-info">{{ \App\Support\NumberFormatter::format((float)$weight,3) }}%</span>
                                     @else
-                                        {{ number_format((float)$weight, 4) }}%
+                                        {{ \App\Support\NumberFormatter::format((float)$weight,3) }}%
                                     @endif
                                 </td>
                                 <td class="bg-light font-weight-bold">
-                                    {{ !$isPlanned ? 'N/A' : ($so->isTemporal() ? $so->formatTemporal($target) : number_format($target, 2)) }}
+                                    {{ !$isPlanned ? 'N/A' : ($so->isTemporal() ? $so->formatTemporal($target) : \App\Support\NumberFormatter::format($target,3)) }}
                                 </td>
                                 <td class="bg-light font-weight-bold text-primary">
-                                    {{ !$isPlanned ? 'N/A' : ($so->isTemporal() ? $so->formatTemporal($actual) : number_format($actual, 2)) }}
+                                    {{ !$isPlanned ? 'N/A' : ($so->isTemporal() ? $so->formatTemporal($actual) : \App\Support\NumberFormatter::format($actual,3)) }}
                                 </td>
                                 <td>
                                     <div class="progress progress-xs mb-1" style="height: 5px;">
                                         <div class="progress-bar bg-{{ $color }}" style="width: {{ min(100, $progress ?? 0) }}%">
                                         </div>
                                     </div>
-                                    <span class="font-weight-bold">{{ $isPlanned ? number_format($progress, 1) . '%' : 'N/A' }}</span>
+                                    <span class="font-weight-bold">{{ $isPlanned ? \App\Support\NumberFormatter::format($progress,3) . '%' : 'N/A' }}</span>
                                     @if($isPlanned && $rawProgress > 100)
-                                        <small class="d-block text-info">Raw: {{ number_format($rawProgress, 1) }}%</small>
+                                        <small class="d-block text-info">Raw: {{ \App\Support\NumberFormatter::format($rawProgress,3) }}%</small>
                                     @endif
                                 </td>
                                 <td class="bg-warning-light font-weight-bold text-dark">
-                                    {{ number_format($weightedScore, 2) }}
+                                    {{ \App\Support\NumberFormatter::format($weightedScore,3) }}
                                 </td>
                                 <td>
                                     <span class="badge badge-{{ $color }} shadow-sm px-3 py-1">{{ $status }}</span>
@@ -241,14 +241,14 @@
                                                                     Date unavailable
                                                                 @endif
                                                             </td>
-                                                            <td>{{ $so->isTemporal() ? $so->formatTemporal($week->planned_value) : number_format($week->planned_value, 2) }}</td>
+                                                            <td>{{ $so->isTemporal() ? $so->formatTemporal($week->planned_value) : \App\Support\NumberFormatter::format($week->planned_value,3) }}</td>
                                                             <td class="text-primary font-weight-bold">
-                                                                {{ $so->isTemporal() ? $so->formatTemporal($week->actual_value) : number_format($week->actual_value, 2) }}
+                                                                {{ $so->isTemporal() ? $so->formatTemporal($week->actual_value) : \App\Support\NumberFormatter::format($week->actual_value,3) }}
                                                             </td>
                                                             <td>
                                                                 @php $wPerf = $so->calculateWeeklyAchievement((float) $week->actual_value, (float) $week->planned_value); @endphp
                                                                 <span class="badge badge-{{ $wPerf >= 90 ? 'success' : ($wPerf >= 50 ? 'warning' : 'danger') }} py-0">
-                                                                    {{ number_format($wPerf, 0) }}%
+                                                                    {{ \App\Support\NumberFormatter::format($wPerf,3) }}%
                                                                 </span>
                                                                 <span class="badge badge-{{ $workflowBadge }} ml-1">{{ $workflowLabel }}</span>
                                                                 <span class="text-muted italic ml-2 small">{{ $week->notes }}</span>
@@ -267,7 +267,7 @@
                         <tr>
                             <td colspan="7" class="text-right py-2 pr-4">OVERALL PERFORMANCE SCORE:</td>
                             <td class="text-center py-2 bg-success text-lg">
-                                {{ number_format($deptScore, 2) }}%
+                                {{ \App\Support\NumberFormatter::format($deptScore,3) }}%
                             </td>
                             <td></td>
                         </tr>

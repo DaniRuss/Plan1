@@ -76,6 +76,9 @@ class MasterPerformanceExport implements FromCollection, WithHeadings, WithStyle
 
     public function styles(Worksheet $sheet)
     {
+        $lastRow = max(3, $sheet->getHighestRow());
+        $sheet->getStyle('C3:'.$sheet->getHighestColumn().$lastRow)
+            ->getNumberFormat()->setFormatCode('#,##0.###');
         $sheet->mergeCells('A1:A2');
         $sheet->mergeCells('B1:B2');
         $sheet->mergeCells('C1:C2');
@@ -126,12 +129,12 @@ class MasterPerformanceExport implements FromCollection, WithHeadings, WithStyle
     {
         if (!($cell['planned'] ?? false)) return 'N/A';
         if (!($cell['reported'] ?? false)) return 'Not Reported';
-        $actual = ($cell['is_rollup'] ?? false) ? 'Roll-up' : (string) $cell['actual'];
-        $display = $actual . ' | Raw ' . number_format((float) $cell['raw_achievement'], 1) . '% | Score ' . number_format((float) $cell['scorecard_achievement'], 1) . '% | ' . $cell['status'];
+        $actual = ($cell['is_rollup'] ?? false) ? 'Roll-up' : \App\Support\NumberFormatter::format($cell['actual']);
+        $display = $actual . ' | Raw ' . \App\Support\NumberFormatter::format((float) $cell['raw_achievement'],3) . '% | Score ' . \App\Support\NumberFormatter::format((float) $cell['scorecard_achievement'],3) . '% | ' . $cell['status'];
         if (!($cell['is_rollup'] ?? false) && abs((float) ($cell['effective_weight'] ?? 0) - $originalWeight) > 0.0001) {
-            $display .= ' | Effective weight ' . number_format((float) $cell['effective_weight'], 4);
+            $display .= ' | Effective weight ' . \App\Support\NumberFormatter::format((float) $cell['effective_weight'],3);
         }
-        if (($cell['coverage'] ?? 100) < 100) $display .= ' | Coverage ' . number_format((float) $cell['coverage'], 1) . '%';
+        if (($cell['coverage'] ?? 100) < 100) $display .= ' | Coverage ' . \App\Support\NumberFormatter::format((float) $cell['coverage'],3) . '%';
         return $display;
     }
 }

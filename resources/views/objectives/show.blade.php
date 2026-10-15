@@ -1,4 +1,12 @@
 @extends('layouts.app')
+@section('title', 'Objective '.$objective->code)
+@push('styles')
+<style>
+    .objective-facts dt {font-size:.8rem;color:#657586;margin-bottom:.3rem}
+    .objective-facts dd {font-size:.95rem;color:#17344b;margin-bottom:1.2rem}
+    .objective-facts small {font-size:.75rem;margin-top:.25rem}
+</style>
+@endpush
 
 @section('content')
     <div class="content-header">
@@ -24,7 +32,9 @@
                 $frequencyLabels = ['inherit' => 'Use department default', 'daily' => 'Daily', 'weekly' => 'Weekly', 'monthly' => 'Monthly'];
             @endphp
             <div class="card card-body mb-3">
-                <strong>Reporting Frequency: {{ $frequencyLabels[$objective->reporting_frequency ?? 'inherit'] }}</strong>
+                <h2 class="h6 font-weight-bold">Reporting schedule</h2>
+                <p class="mb-1"><strong>Effective frequency:</strong> {{ ucfirst($objective->effectiveReportingFrequency()) }}</p>
+                <small class="text-muted">{{ $objective->reporting_frequency ? 'Configured specifically for this objective.' : 'Inherited from the owning department’s reporting schedule.' }}</small>
                 @if($objective->pending_reporting_frequency)
                     <p class="mt-2">Awaiting approval: {{ $frequencyLabels[$objective->pending_reporting_frequency] }}. Reason: {{ $objective->frequency_change_reason }}</p>
                     @if(auth()->user()->isPlanReportHeadOffice() || auth()->user()->isSystemAdmin())
@@ -138,41 +148,10 @@
 
             <div class="card">
                 <div class="card-header">
-                    <h3 class="card-title">Description</h3>
+                    <h3 class="card-title">Objective overview</h3>
                 </div>
                 <div class="card-body">
-                    <p class="lead">{{ $objective->description }}</p>
-
-                    <div class="row">
-                        <div class="col-md-3"><strong>Weight:</strong> {{ $objective->weight }}%</div>
-                        <div class="col-md-3"><strong>Owner:</strong> 
-                            @if($objective->department->parent)
-                                {{ $objective->department->parent->name }} &gt; 
-                            @endif
-                            {{ $objective->department->name }}
-                        </div>
-                        <div class="col-md-3"><strong>Unit:</strong> {{ $objective->unit ?? 'N/A' }}</div>
-                        <div class="col-md-3"><strong>Baseline:</strong> {{ $objective->baseline_value }}
-                            ({{ $objective->baseline_year }})</div>
-                    </div>
-
-                    <div class="row mt-3">
-                        <div class="col-md-12">
-                            <strong>Performers:</strong>
-                            @if($objective->performers && is_array($objective->performers))
-                                @php
-                                    $performerDepts = \App\Models\Department::whereIn('id', $objective->performers)->pluck('name');
-                                @endphp
-                                @if($performerDepts->count() > 0)
-                                    {{ $performerDepts->join(', ') }}
-                                @else
-                                    <span class="text-muted">None assigned</span>
-                                @endif
-                            @else
-                                <span class="text-muted">None assigned</span>
-                            @endif
-                        </div>
-                    </div>
+                    @include('objectives.partials.detail-summary')
                 </div>
                 <div class="card-footer">
                     @php
@@ -206,7 +185,7 @@
             @if($objective->children->count() > 0)
                 <div class="card">
                     <div class="card-header">
-                        <h3 class="card-title">Sub-Objectives</h3>
+                        <h3 class="card-title">Direct sub-objectives and activities</h3>
                     </div>
                     <div class="card-body p-0">
                         <table class="table table-sm">
@@ -215,7 +194,7 @@
                                     <th>Code</th>
                                     <th>Description</th>
                                     <th>Weight</th>
-                                    <th>Target</th>
+                                    <th>Annual target</th><th>Status</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -223,8 +202,8 @@
                                     <tr>
                                         <td><a href="{{ route('objectives.show', $child->id) }}">{{ $child->code }}</a></td>
                                         <td>{{ $child->description }}</td>
-                                        <td>{{ $child->weight }}</td>
-                                        <td>{{ $child->annual_target }}</td>
+                                        <td>{{ \App\Support\NumberFormatter::format((float) $child->weight,3) }}%</td>
+                                        <td>{{ $child->annual_target === null ? 'Not set' : \App\Support\NumberFormatter::format((float) $child->annual_target,3) }} @if($child->annual_target !== null){{ $child->unit }}@endif</td><td>@include('objectives.partials.status', ['objective' => $child])</td>
                                     </tr>
                                 @endforeach
                             </tbody>
