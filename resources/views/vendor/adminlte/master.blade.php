@@ -2,7 +2,7 @@
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 
 <head>
-    <script src="{{ asset('js/number-format.js') }}"></script>
+    <script src="{{ asset('js/number-format.js') }}?v={{ filemtime(public_path('js/number-format.js')) }}"></script>
     @include('layouts.favicon')
 
     {{-- Base Meta Tags --}}

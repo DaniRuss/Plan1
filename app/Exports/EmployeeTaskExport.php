@@ -51,7 +51,7 @@ class EmployeeTaskExport implements FromCollection, WithHeadings, WithMapping, W
         return [
             $task->title,
             ucfirst($task->status),
-            $task->completion_percentage . '%',
+            \App\Support\NumberFormatter::format($task->completion_percentage) . '%',
             $task->planItem->strategicObjective->description ?? 'General',
             $task->created_at->format('Y-m-d'),
             $task->due_date ?? '-',

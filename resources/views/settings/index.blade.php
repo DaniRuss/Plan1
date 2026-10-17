@@ -203,7 +203,7 @@
                                                 @if($key === 'unsatisfactory')
                                                     <input class="form-control" value="0" readonly>
                                                 @else
-                                                    <input type="number" step="0.01" min="0" max="100" name="performance_{{ $key }}_min" class="form-control" required value="{{ \App\Models\Setting::get('performance_'.$key.'_min', $defaultMin) }}">
+                                                    <input type="number" step="any" min="0" max="100" name="performance_{{ $key }}_min" class="form-control" required data-original-number="{{ \App\Models\Setting::get('performance_'.$key.'_min', $defaultMin) }}" value="{{ \App\Support\NumberFormatter::format(\App\Models\Setting::get('performance_'.$key.'_min', $defaultMin),3,'.','') }}">
                                                     <input type="hidden" name="group_performance_{{ $key }}_min" value="performance">
                                                 @endif
                                             </div>
@@ -273,7 +273,7 @@
                                         <div class="form-group">
                                             <label>Weekly Deadline — Days After Friday</label>
                                             <input type="number" min="0" max="14" name="weekly_submission_due_days" class="form-control"
-                                                value="{{ \App\Models\Setting::get('weekly_submission_due_days', 3) }}">
+                                                data-original-number="{{ \App\Models\Setting::get('weekly_submission_due_days', 3) }}" value="{{ \App\Support\NumberFormatter::format(\App\Models\Setting::get('weekly_submission_due_days', 3),3,'.','') }}">
                                             <input type="hidden" name="group_weekly_submission_due_days" value="workflow">
                                             <small class="text-muted">Default 3 means the following Monday.</small>
                                         </div>

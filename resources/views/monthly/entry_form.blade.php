@@ -112,7 +112,7 @@
                                         <input type="number" step="any" min="0"
                                             name="entries[{{ $item->id }}][actual_value]"
                                             class="form-control form-control-sm text-right"
-                                            value="{{ old('entries.' . $item->id . '.actual_value', $entry?->actual_value) }}"
+                                            data-original-number="{{ old('entries.' . $item->id . '.actual_value', $entry?->actual_value) }}" value="{{ \App\Support\NumberFormatter::format(old('entries.' . $item->id . '.actual_value', $entry?->actual_value),3,'.','') }}"
                                             placeholder="{{ !$isPlanned ? 'Not planned this month' : ($isCalculatedParent ? 'Calculated from sub-objectives' : '') }}"
                                             {{ ($closure || $isCalculatedParent || !$isPlanned) ? 'readonly' : '' }}>
                                         @if($isCalculatedParent)

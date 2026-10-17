@@ -40,7 +40,7 @@
                                     </div>
                                     <small class="form-text text-muted">Upload the EDR action-plan Excel file. Nothing is saved until you review and confirm the preview.</small>
                                 </div>
-                                <div class="form-group"><label for="target_year">Plan year (EFY)</label><input id="target_year" name="target_year" type="number" class="form-control" value="{{ old('target_year', 2019) }}" required></div>
+                                <div class="form-group"><label for="target_year">Plan year (EFY)</label><input id="target_year" name="target_year" type="number" class="form-control" data-original-number="{{ old('target_year', 2019) }}" value="{{ \App\Support\NumberFormatter::format(old('target_year', 2019),3,'.','') }}" required></div>
                                 <div class="form-group">
                                     <a href="{{ route('objectives.download-template') }}" class="btn btn-info btn-sm">
                                         <i class="fas fa-download"></i> Download Template

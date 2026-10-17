@@ -14,5 +14,7 @@ class NumberFormatterTest extends TestCase
         }
         $this->assertSame('12345.679',NumberFormatter::format('12345.6789',3,'.',''));
         $this->assertSame('',NumberFormatter::format(null));
+        $this->assertSame('N/A',NumberFormatter::format('N/A'));
+        $this->assertSame('-',NumberFormatter::format('-'));
     }
 }

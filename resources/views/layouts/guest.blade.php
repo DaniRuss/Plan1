@@ -2,7 +2,7 @@
 <html lang="en">
 
 <head>
-    <script src="{{ asset('js/number-format.js') }}"></script>
+    <script src="{{ asset('js/number-format.js') }}?v={{ filemtime(public_path('js/number-format.js')) }}"></script>
     @include('layouts.favicon')
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">

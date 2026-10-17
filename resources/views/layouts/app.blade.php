@@ -15,7 +15,7 @@
 <html lang="en">
 
 <head>
-    <script src="{{ asset('js/number-format.js') }}"></script>
+    <script src="{{ asset('js/number-format.js') }}?v={{ filemtime(public_path('js/number-format.js')) }}"></script>
     @include('layouts.favicon')
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -318,6 +318,9 @@
                                 </a>
                             </li>
 
+                            @if($navUser->hasPermission('view_performance'))
+                                <li class="nav-item"><a href="{{ route('shared-reporting.index') }}" class="nav-link {{ request()->is('shared-reporting*','reporting-teams*') ? 'active' : '' }}"><i class="nav-icon fas fa-users"></i><p>Shared Reporting</p></a></li>
+                            @endif
                             @if($navUser->canAccessReportingModule('monthly'))
                                 <li class="nav-item">
                                     <a href="{{ route('monthly.dashboard') }}"

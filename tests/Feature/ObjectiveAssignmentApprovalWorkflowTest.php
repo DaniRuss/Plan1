@@ -187,7 +187,7 @@ class ObjectiveAssignmentApprovalWorkflowTest extends TestCase
         $this->assertSame('returned_to_chief', $assignment->fresh()->status);
     }
 
-    public function test_chief_approval_includes_nested_children_only_in_the_same_department_and_plan(): void
+    public function test_chief_assigns_each_subobjective_independently_to_different_directorates(): void
     {
         $this->seed(RolesAndPermissionsSeeder::class);
         $department = Department::create(['name' => 'Operations', 'code' => 'OPS']);
@@ -220,20 +220,24 @@ class ObjectiveAssignmentApprovalWorkflowTest extends TestCase
 
         $this->actingAs($chief)->get(route('assignments.index'))->assertOk()
             ->assertSeeInOrder(['Main objective', 'Second child', 'Nested child', 'Tenth child'])
-            ->assertDontSee(route('assignments.chief-approve', $secondAssignment), false);
+            ->assertSee(route('assignments.chief-approve', $secondAssignment), false);
         $this->actingAs($chief)->post(route('assignments.chief-approve', $rootAssignment), [
             'directorate_user_id' => $directorate->id, 'note' => 'Approved together',
         ])->assertRedirect()->assertSessionHasNoErrors();
 
-        foreach ([$root, $second, $nested, $tenth] as $objective) {
-            $assignment = $this->assignment($objective, $department);
-            $this->assertSame('pending_directorate_approval', $assignment->status);
-            $this->assertEquals($directorate->id, $assignment->assigned_directorate_user_id);
-            $this->assertEquals($chief->id, $assignment->chief_reviewed_by);
-            $this->assertSame('Approved together', $assignment->chief_note);
-            $this->assertNotNull($assignment->chief_reviewed_at);
-            $this->assertSame('pending_chief_approval', $this->assignment($objective, $otherDepartment)->status);
-        }
+        $this->assertSame('pending_directorate_approval',$rootAssignment->fresh()->status);
+        $this->assertSame('returned_to_chief',$secondAssignment->fresh()->status);
+        foreach ([$nested,$tenth] as $objective) $this->assertSame('pending_chief_approval',$this->assignment($objective,$department)->status);
+        $otherDirectorate=$this->user($department,'department_directorate');
+        $this->post(route('assignments.chief-approve',$secondAssignment),['directorate_user_id'=>$directorate->id])->assertRedirect()->assertSessionHasNoErrors();
+        $tenthAssignment=$this->assignment($tenth,$department);
+        $this->post(route('assignments.chief-approve',$tenthAssignment),['directorate_user_id'=>$otherDirectorate->id])->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertEquals($directorate->id,$secondAssignment->fresh()->assigned_directorate_user_id);
+        $this->assertEquals($otherDirectorate->id,$tenthAssignment->fresh()->assigned_directorate_user_id);
+        $this->assertSame('pending_chief_approval',$this->assignment($nested,$department)->status);
+        foreach ([$root,$second,$nested,$tenth] as $objective) $this->assertSame('pending_chief_approval',$this->assignment($objective,$otherDepartment)->status);
+        $this->actingAs($directorate)->post(route('assignments.directorate-approve',$tenthAssignment))->assertForbidden();
+        $this->actingAs($otherDirectorate)->get(route('assignments.index'))->assertOk()->assertSee('Tenth child')->assertDontSee('Second child');
         $this->assertSame('pending_chief_approval', $previousAssignment->fresh()->status);
     }
 

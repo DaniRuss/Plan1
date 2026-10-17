@@ -181,7 +181,7 @@
                                                 <input type="number" step="any" 
                                                        name="weekly_plans[{{ $item->id }}]" 
                                                        class="form-control form-control-sm text-center font-weight-bold row-plan-input" 
-                                                       value="{{ round($currentPlan, 2) }}"
+                                                       data-original-number="{{ $currentPlan }}" value="{{ \App\Support\NumberFormatter::format($currentPlan,3,'.','') }}"
                                                        {{ ($repeatsMonthlyPlan || !$isPlanned) ? 'readonly' : '' }}
                                                        title="{{ $repeatsMonthlyPlan ? 'Monthly plan repeated in every week' : 'Monthly plan distributed across weeks' }}"
                                                        placeholder="0.00">
@@ -196,7 +196,7 @@
                                                            name="actuals[{{ $item->id }}][{{ $d }}]" 
                                                            class="form-control form-control-sm text-center day-input {{ !$isInMonth ? 'opacity-50' : '' }}" 
                                                        data-item="{{ $item->id }}"
-                                                       value="{{ $val ? $val->actual_value : '' }}"
+                                                       data-original-number="{{ $val ? $val->actual_value : '' }}" value="{{ \App\Support\NumberFormatter::format($val ? $val->actual_value : '',3,'.','') }}"
                                                        {{ (!$isInMonth || $isCalculatedParent || !$isPlanned) ? 'readonly tabindex=-1' : '' }}
                                                        placeholder="{{ !$isInMonth ? '-' : '' }}">
                                                 </td>

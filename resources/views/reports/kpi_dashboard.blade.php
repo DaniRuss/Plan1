@@ -111,8 +111,8 @@
                     }
                 }
             }
-            if ($targetCount > 0) $dbTarget = round($totalTarget / $targetCount, 2);
-            if ($actualCount > 0) $actual = round($totalActual / $actualCount, 2);
+            if ($targetCount > 0) $dbTarget = ($totalTarget / $targetCount);
+            if ($actualCount > 0) $actual = ($totalActual / $actualCount);
         }
 
         // Use database target if available, otherwise fallback to master definition
@@ -123,7 +123,7 @@
         $status = 'gray';
         $performanceStatus = 'Not Reported';
         if ($actual !== null) {
-            $achievement = round(app(\App\Services\EdrPerformanceCalculator::class)->rawAchievement((float)$actual, (float)$effectiveTarget, $def['dir']), 1);
+            $achievement = app(\App\Services\EdrPerformanceCalculator::class)->rawAchievement((float)$actual, (float)$effectiveTarget, $def['dir']);
             $performanceStatus = app(\App\Services\EdrPerformanceCalculator::class)->performanceStatus($achievement);
             $status = $achievement >= 100 ? 'green' : ($achievement >= 80 ? 'yellow' : 'red');
         }
@@ -400,7 +400,7 @@
                             <div>
                                 <span class="badge badge-danger">{{ $code }}</span>
                                 <h5 class="mt-1 mb-0">{{ $k['name'] }}</h5>
-                                <p class="text-muted mb-2" style="font-size:12px;">Target: {{ $k['target'].$k['unit'] }}</p>
+                                <p class="text-muted mb-2" style="font-size:12px;">Target: {{ \App\Support\NumberFormatter::format($k['target']).$k['unit'] }}</p>
                             </div>
                             <div style="font-size:36px;font-weight:800;color:{{ $k['status']==='green'?'#28a745':($k['status']==='yellow'?'#f39c12':'#dc3545') }}">
                                 {{ $k['actual']!==null ? \App\Support\NumberFormatter::format($k['actual']) : '—' }}
@@ -453,7 +453,7 @@
                         </div>
                         <p class="font-weight-bold" style="font-size:12px;">{{ $k['name'] }}</p>
                         <div class="perf-bar"><div class="perf-bar-fill bg-warning" style="width:{{ $pctCapped }}%"></div></div>
-                        <small class="text-muted">Target: {{ $k['target'].$k['unit'] }} | {{ $pct !== null ? $pct.'%' : 'No Data' }}</small>
+                        <small class="text-muted">Target: {{ \App\Support\NumberFormatter::format($k['target']).$k['unit'] }} | {{ $pct !== null ? $pct.'%' : 'No Data' }}</small>
                     </div>
                 </div>
             </div>
@@ -506,7 +506,7 @@
                         </div>
                         <p style="font-size:11px;" class="font-weight-bold mb-1">{{ $k['name'] }}</p>
                         <div class="perf-bar"><div class="perf-bar-fill" style="background:#6f42c1;width:{{ $pctCapped }}%"></div></div>
-                        <small class="text-muted">Target {{ $k['target'].$k['unit'] }}</small>
+                        <small class="text-muted">Target {{ \App\Support\NumberFormatter::format($k['target']).$k['unit'] }}</small>
                     </div>
                 </div>
             </div>

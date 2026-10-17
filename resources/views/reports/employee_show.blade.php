@@ -74,7 +74,7 @@
                             <div class="row no-gutters align-items-center">
                                 <div class="col mr-2">
                                     <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Avg. Progress</div>
-                                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{ round($avgProgress, 1) }}%</div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{ \App\Support\NumberFormatter::format($avgProgress) }}%</div>
                                     <div class="progress progress-sm mt-1">
                                         <div class="progress-bar bg-success" role="progressbar" style="width: {{ $avgProgress }}%"></div>
                                     </div>
@@ -158,7 +158,7 @@
                                         </td>
                                         <td class="text-center" style="width: 150px;">
                                             <div class="small font-weight-bold mb-1">
-                                                {{ round($task->completion_percentage, 0) }}%</div>
+                                                {{ \App\Support\NumberFormatter::format($task->completion_percentage) }}%</div>
                                             <div class="progress progress-xs" style="height: 5px;">
                                                 <div class="progress-bar {{ $task->completion_percentage >= 80 ? 'bg-success' : ($task->completion_percentage >= 40 ? 'bg-info' : 'bg-warning') }}"
                                                     role="progressbar" style="width: {{ \App\Support\NumberFormatter::format($task->completion_percentage) }}%"></div>

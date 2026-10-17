@@ -74,7 +74,7 @@
                                         <td class="text-right">{{ $isPlanned ? \App\Support\NumberFormatter::format((float)$target,3) : 'N/A' }}</td>
                                         <td>
                                             <input type="number" step="any" min="0" name="performances[{{ $item->id }}]"
-                                                value="{{ $actual }}" class="form-control form-control-sm text-right"
+                                                data-original-number="{{ $actual }}" value="{{ \App\Support\NumberFormatter::format($actual,3,'.','') }}" class="form-control form-control-sm text-right"
                                                 placeholder="{{ $isCalculatedParent ? 'Calculated from sub-objectives' : 'Enter actual' }}"
                                                 {{ ($isCalculatedParent || !$isPlanned) ? 'readonly' : '' }}>
                                             @if($isCalculatedParent)

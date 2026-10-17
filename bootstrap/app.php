@@ -12,6 +12,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [
+            \App\Http\Middleware\SharedReportingWorkspace::class,
             \App\Http\Middleware\ForcePasswordChange::class,
         ]);
     })

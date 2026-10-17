@@ -24,7 +24,7 @@ class DashboardWorkspace
             $employeeId = $user->employee_id;
             // Department workflow accounts share unassigned items. Explicit expert
             // assignments remain personal and must not leak to another expert.
-            $query->where(function ($q) use ($employeeId) {
+            if (!\App\Models\ReportingTeam::where('department_id',$user->department_id)->exists()) $query->where(function ($q) use ($employeeId) {
                 $q->whereNull('experts')->orWhereJsonLength('experts', 0);
                 if ($employeeId) $q->orWhereJsonContains('experts', (int) $employeeId);
             });

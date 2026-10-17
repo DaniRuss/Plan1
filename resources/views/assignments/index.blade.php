@@ -6,7 +6,7 @@
  .assigned-kpi-badge{background:#6f42c1;color:#fff;font-weight:700}
 </style>
 <div class="container-fluid">
- <div class="mb-4"><h1 class="h3 mb-1">Assigned Objectives</h1><p class="text-muted">Chief approval, Directorate assignment, and objectives released for reporting. Approving a main objective also approves and assigns its pending sub-objectives to the selected Directorate.</p></div>
+ <div class="mb-4"><h1 class="h3 mb-1">Assigned Objectives</h1><p class="text-muted">Chief approval, Directorate assignment, and objectives released for reporting. Approve and assign each objective or sub-objective separately. Different sub-objectives can be assigned to different Directorate users.</p></div>
  @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
  @if($errors->any())<div class="alert alert-danger"><ul class="mb-0">@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
  <div class="card shadow-sm">
@@ -35,16 +35,12 @@
       @if($objective->is_supplementary)<span class="badge ml-2" style="background:#7c3aed;color:white">Department Added</span><div class="small text-muted">Excluded from parent rollup and overall score</div>@endif
       @if($assignment->rejection_reason)<div class="small text-danger mt-1"><strong>Return reason:</strong> {{ $assignment->rejection_reason }}</div>@endif
      </td>
-     <td>{{ $item->annual_target+0 }} {{ $objective->unit }}</td><td><span class="badge badge-{{ $badge }}">{{ $label }}</span></td><td>{{ $assignment->assignedDirectorate->name??'—' }}</td>
+     <td>{{ \App\Support\NumberFormatter::format($item->annual_target+0) }} {{ $objective->unit }}</td><td><span class="badge badge-{{ $badge }}">{{ $label }}</span></td><td>{{ $assignment->assignedDirectorate->name??'—' }}</td>
      <td>
       @if(auth()->user()->isDepartmentChief()&&in_array($assignment->status,['pending_chief_approval','returned_to_chief']))
-       @if(isset($chiefApprovalParents[$assignment->id]))
-        <div class="small text-muted mb-2">Will be approved and assigned with objective {{ $chiefApprovalParents[$assignment->id] }}.</div>
-       @else
        <form method="POST" action="{{ route('assignments.chief-approve',$assignment) }}" class="mb-2">@csrf
         <div class="input-group input-group-sm"><select name="directorate_user_id" class="form-control" required><option value="">Select Directorate user</option>@foreach($directorates as $directorate)<option value="{{ $directorate->id }}">{{ $directorate->name }}</option>@endforeach</select><div class="input-group-append"><button class="btn btn-success">Approve &amp; Assign to Directorate</button></div></div>
        </form>
-       @endif
        @if($assignment->status==='pending_chief_approval')<form method="POST" action="{{ route('assignments.chief-return',$assignment) }}" class="input-group input-group-sm mb-2">@csrf<input name="reason" class="form-control" placeholder="Required return reason" required><div class="input-group-append"><button class="btn btn-outline-danger">Return to Head Office</button></div></form>@endif
       @endif
       @if(auth()->user()->isDepartmentChief()&&$objective->getHierarchyLevel()<3)<a class="btn btn-sm btn-outline-primary" href="{{ route('assignments.supplementary.create',$assignment) }}"><i class="fas fa-plus"></i> Add Supplementary Sub-objective</a>@endif

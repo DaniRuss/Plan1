@@ -103,9 +103,11 @@ class ScorecardController extends Controller
         $effectiveWeights = app(\App\Services\PeriodWeightNormalizer::class)
             ->forPeriod($plan->items, $month);
         $parentObjectiveIds = $plan->items->pluck('strategicObjective.parent_id')->filter()->map(fn ($id) => (int) $id)->unique();
+        $notApplicable = app(\App\Services\SharedReporting::class)->notApplicableForMonth((int)$deptId,(int)$year,strtolower($month));
 
         foreach ($plan->items as $item) {
             $so = $item->strategicObjective;
+            if (in_array((int)$item->id,$notApplicable,true)) continue;
             if (!$so || $so->is_reference_only || $so->exclude_from_overall_score || $parentObjectiveIds->contains((int) $so->id)) continue;
 
             $target = $item->getPlannedTargetForPeriod($month);

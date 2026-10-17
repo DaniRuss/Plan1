@@ -107,7 +107,7 @@
                              <div class="form-group">
                                 <label for="weight" id="weightLabel" class="required">Weight (Percentage Points)</label>
                                 <div class="input-group">
-                                    <input type="number" step="0.01" name="weight" id="weight" class="form-control @error('weight') is-invalid @enderror" value="{{ old('weight') }}" required placeholder="e.g. 5.00">
+                                    <input type="number" step="any" name="weight" id="weight" class="form-control @error('weight') is-invalid @enderror" data-original-number="{{ old('weight') }}" value="{{ \App\Support\NumberFormatter::format(old('weight'),3,'.','') }}" required placeholder="e.g. 5.00">
                                     <div class="input-group-append">
                                         <span class="input-group-text">%</span>
                                     </div>

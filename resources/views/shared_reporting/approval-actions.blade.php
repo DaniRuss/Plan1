@@ -1,0 +1,11 @@
+@php
+ $user=auth()->user(); $admin=$user->isSystemAdmin(); $chief=$reporting->canManageTeam($user,$submission->department_id); $state=$submission->status; $actions=[];
+ if($chief && in_array($state,['submitted_to_chief','returned_to_department_chief'],true)) $actions=['approve_chief'=>'Approve department results and send to Plan & Report','return_directorates'=>'Return selected sections to directorates'];
+ if(($admin || $user->isPlanReportDepartmentExpert()) && in_array($state,['submitted_to_plan_report_department','returned_to_plan_report_department'],true)) $actions=['forward_plan_report'=>'Forward to Plan & Report Directorate','return_department'=>'Return to department chief for correction'];
+ if(($admin || $user->isPlanReportDirectorate()) && in_array($state,['submitted_to_plan_report_directorate','returned_to_plan_report_directorate'],true)) $actions=['forward_head'=>'Forward to Head Office','return_department_directorate'=>'Return to department chief for correction'];
+ if(($admin || $user->isPlanReportDirectorate()) && $state==='submitted_to_plan_report_directorate') $actions['return_plan_report']='Return to Plan & Report Expert';
+ if(($admin || $user->isPlanReportHeadOffice()) && $state==='submitted_to_head_office') $actions=['approve_final'=>'Grant final approval','return_directorate'=>'Return to Plan & Report Directorate','return_chief'=>'Return to department chief'];
+@endphp
+@if($actions)<form method="POST" action="{{ route('shared-reporting.transition',$submission) }}" class="border-top mt-3 pt-3">@csrf<input type="hidden" name="version" value="{{ $submission->version }}"><label for="review-note">Review comment (required when returning)</label><textarea id="review-note" name="note" class="form-control mb-2" maxlength="2000"></textarea>
+@if(isset($actions['return_directorates']))<div class="mb-2">Select sections requiring correction:<br>@foreach($submission->sections as $section)<label class="mr-3"><input type="checkbox" name="sections[]" value="{{ $section->id }}"> {{ $section->reviewer->name }}</label>@endforeach</div>@endif
+@foreach($actions as $action=>$label)<button class="btn btn-{{ str_starts_with($action,'return_')?'outline-danger':'success' }} btn-sm mb-2" name="action" value="{{ $action }}">{{ $label }}</button> @endforeach</form>@endif

@@ -50,24 +50,13 @@ class PlanAssignmentController extends Controller
                 ?: strnatcasecmp($left->planItem->strategicObjective->code, $right->planItem->strategicObjective->code)
                 ?: ($left->id <=> $right->id);
         })->values();
-        $chiefApprovalParents = [];
-        $pendingAssignments = $assignments->filter(fn ($row) => in_array($row->status, ['pending_chief_approval', 'returned_to_chief'], true))
-            ->keyBy(fn ($row) => $row->performer_id.':'.$row->planItem->plan_id.':'.$row->planItem->strategic_objective_id);
-        foreach ($pendingAssignments as $row) {
-            $parent = $row->planItem->strategicObjective->parent;
-            while ($parent) {
-                $ancestor = $pendingAssignments->get($row->performer_id.':'.$row->planItem->plan_id.':'.$parent->id);
-                if ($ancestor) $chiefApprovalParents[$row->id] = $parent->code;
-                $parent = $parent->parent;
-            }
-        }
         $directorates = ($user->isDepartmentChief() || ($user->isSystemAdmin() && $dept))
             ? User::where('department_id', $dept->id)->where('is_active', true)
                 ->whereHas('roles', fn ($q) => $q->where('name', User::ROLE_DEPARTMENT_DIRECTORATE))
                 ->orderBy('name')->get()
             : collect();
 
-        return view('assignments.index', compact('assignments', 'directorates', 'dept', 'chiefApprovalParents'));
+        return view('assignments.index', compact('assignments', 'directorates', 'dept'));
     }
 
     public function accept(PlanItemAssignment $assignment)
@@ -94,19 +83,9 @@ class PlanAssignmentController extends Controller
         abort_unless($directorate->isDepartmentDirectorate(), 422, 'Selected user is not a Department Directorate.');
 
         DB::transaction(function () use ($assignment, $directorate, $user, $validated) {
-            $objectiveIds = [$assignment->planItem->strategic_objective_id];
-            $frontier = $objectiveIds;
-            while ($frontier) {
-                $frontier = StrategicObjective::whereIn('parent_id', $frontier)
-                    ->whereNotIn('id', $objectiveIds)->pluck('id')->all();
-                $objectiveIds = array_merge($objectiveIds, $frontier);
-            }
-
-            PlanItemAssignment::where('performer_id', $assignment->performer_id)
-                ->whereHas('planItem', fn ($q) => $q->where('plan_id', $assignment->planItem->plan_id)
-                    ->whereIn('strategic_objective_id', $objectiveIds))
-                ->whereIn('status', ['pending_chief_approval', 'returned_to_chief'])
-                ->update([
+            $assignment = PlanItemAssignment::whereKey($assignment->id)->lockForUpdate()->firstOrFail();
+            abort_unless(in_array($assignment->status,['pending_chief_approval','returned_to_chief'],true),422,'Assignment is no longer awaiting Chief action.');
+            $assignment->update([
                     'status' => 'pending_directorate_approval',
                     'assigned_directorate_user_id' => $directorate->id,
                     'chief_reviewed_by' => $user->id,
@@ -119,7 +98,7 @@ class PlanAssignmentController extends Controller
             [$directorate], 'Objective approved and assigned', $this->assignmentLabel($assignment) . ' was approved and assigned to you by the Department Chief.',
             route('assignments.index'), 'info', $user
         );
-        return back()->with('success', 'Objective and its pending sub-objectives approved and assigned to Directorate.');
+        return back()->with('success', 'Selected objective approved and assigned to Directorate. Other objectives were not changed.');
     }
 
     public function chiefReturn(Request $request, PlanItemAssignment $assignment)

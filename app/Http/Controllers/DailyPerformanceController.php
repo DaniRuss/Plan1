@@ -14,6 +14,10 @@ use Illuminate\Support\Facades\DB;
 
 class DailyPerformanceController extends Controller
 {
+    public function recalculateSharedPeriod(\App\Models\ReportingSubmission $submission, int $userId): void
+    {
+        $this->performParentRollups($submission->department_id,$submission->year,$submission->month,$submission->week,$submission->status,$userId,$submission->plan_id);
+    }
     public function dashboard(Request $request)
     {
         $user = auth()->user();
@@ -276,9 +280,11 @@ class DailyPerformanceController extends Controller
         string $month,
         int $week,
         string $workflowStatus,
-        ?int $createdBy
+        ?int $createdBy,
+        ?int $sharedPlanId = null
     ): void {
         $accessibleItems = $this->accessiblePlanItemsQuery($deptId)
+            ->when($sharedPlanId !== null,fn ($query) => $query->where('plan_id',$sharedPlanId))
             ->with('strategicObjective')
             ->get();
 

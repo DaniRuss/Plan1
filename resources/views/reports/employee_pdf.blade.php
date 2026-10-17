@@ -121,7 +121,7 @@
             </tr>
             <tr>
                 <th>Average Progress</th>
-                <td class="text-center">{{ round($tasks->avg('completion_percentage'), 1) }}%</td>
+                <td class="text-center">{{ \App\Support\NumberFormatter::format($tasks->avg('completion_percentage')) }}%</td>
             </tr>
             <tr>
                 <th>Tasks Completed</th>

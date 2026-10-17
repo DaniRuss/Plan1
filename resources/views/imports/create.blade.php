@@ -88,11 +88,11 @@
             </div>
             <div class="col-md-3 form-group">
                 <label class="small font-weight-bold">Weight (Tons)</label>
-                <input type="number" step="0.01" name="weight" class="form-control" value="{{ old('weight') }}" placeholder="0.00">
+                <input type="number" step="any" name="weight" class="form-control" data-original-number="{{ old('weight') }}" value="{{ \App\Support\NumberFormatter::format(old('weight'),3,'.','') }}" placeholder="0.00">
             </div>
             <div class="col-md-3 form-group" id="container-count-group">
                 <label class="small font-weight-bold">Container Count</label>
-                <input type="number" name="container_count" class="form-control" value="{{ old('container_count') }}" placeholder="e.g. 2">
+                <input type="number" name="container_count" class="form-control" data-original-number="{{ old('container_count') }}" value="{{ \App\Support\NumberFormatter::format(old('container_count'),3,'.','') }}" placeholder="e.g. 2">
             </div>
         </div>
         <div class="row">

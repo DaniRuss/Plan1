@@ -53,7 +53,7 @@
                                         <div class="progress progress-xs mb-1" style="height: 4px; width: 80px; margin: 0 auto;">
                                             <div class="progress-bar bg-{{ $color }}" style="width: {{ $report->achievement }}%"></div>
                                         </div>
-                                        <span class="badge badge-{{ $color }} shadow-sm px-2">{{ round($report->achievement, 1) }}%</span>
+                                        <span class="badge badge-{{ $color }} shadow-sm px-2">{{ \App\Support\NumberFormatter::format($report->achievement) }}%</span>
                                     @else
                                         <span class="text-muted small">N/A</span>
                                     @endif

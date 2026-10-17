@@ -48,7 +48,7 @@ class ProjectExport implements FromCollection, WithHeadings, WithMapping, WithSt
             $project->department->name,
             $project->planned_progress_desc,
             $project->performance_desc,
-            $project->completion_percentage . '%',
+            \App\Support\NumberFormatter::format($project->completion_percentage) . '%',
             strtoupper(str_replace('_', ' ', $project->status)),
             $project->year
         ];

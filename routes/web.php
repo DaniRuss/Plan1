@@ -23,6 +23,16 @@ Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
 // Protected Routes
 Route::middleware(['auth'])->group(function () {
+    Route::get('shared-reporting', [App\Http\Controllers\SharedReportingController::class,'index'])->name('shared-reporting.index');
+    Route::get('reporting-teams/{department}', [App\Http\Controllers\SharedReportingController::class,'team'])->name('reporting-teams.edit');
+    Route::put('reporting-teams/{department}', [App\Http\Controllers\SharedReportingController::class,'updateTeam'])->name('reporting-teams.update');
+    Route::post('shared-reporting', [App\Http\Controllers\SharedReportingController::class,'start'])->name('shared-reporting.start');
+    Route::get('shared-reporting/{submission}', [App\Http\Controllers\SharedReportingController::class,'show'])->name('shared-reporting.show');
+    Route::post('shared-reporting/{submission}/transition', [App\Http\Controllers\SharedReportingController::class,'transition'])->name('shared-reporting.transition');
+    Route::put('shared-reporting/{submission}/entries', [App\Http\Controllers\SharedReportingController::class,'saveAll'])->name('shared-reporting.save-all');
+    Route::put('shared-reporting-entries/{entry}', [App\Http\Controllers\SharedReportingController::class,'save'])->name('shared-reporting.save');
+    Route::put('shared-reporting-entries/{entry}/reviewer', [App\Http\Controllers\SharedReportingController::class,'assign'])->name('shared-reporting.assign');
+    Route::get('shared-reporting-entries/{entry}/evidence/{index}', [App\Http\Controllers\SharedReportingController::class,'evidence'])->whereNumber('index')->name('shared-reporting.evidence');
     Route::get('/first-password', [App\Http\Controllers\ProfileController::class, 'firstPasswordForm'])->name('password.first.edit');
     Route::put('/first-password', [App\Http\Controllers\ProfileController::class, 'updateFirstPassword'])->name('password.first.update');
 

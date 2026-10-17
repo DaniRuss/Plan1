@@ -85,6 +85,28 @@
                 </div>
             </div>
 
+            @if($sharedWorkspace ?? false)
+            <div class="alert alert-info">
+                <strong>Experts enter performance in Shared Reporting.</strong>
+                This Workbench displays actuals and achievement percentages after the department chief submits the report.
+                @if($sharedSubmission)
+                    <a class="btn btn-light btn-sm ml-2" href="{{ route('shared-reporting.show',$sharedSubmission) }}">Open {{ ucfirst($month) }} Week {{ $week }} in Shared Reporting</a>
+                @elseif(auth()->user()->isDepartmentExpert() || auth()->user()->isSystemAdmin())
+                    <form method="POST" action="{{ route('shared-reporting.start') }}" class="mt-2">
+                        @csrf
+                        <input type="hidden" name="department_id" value="{{ $deptId }}">
+                        <input type="hidden" name="year" value="{{ $year }}">
+                        <input type="hidden" name="month" value="{{ $month }}">
+                        <input type="hidden" name="week" value="{{ $week }}">
+                        <input type="hidden" name="frequency" value="weekly">
+                        <button class="btn btn-light btn-sm">Enter performance: {{ ucfirst($month) }} Week {{ $week }}</button>
+                    </form>
+                @else
+                    <a class="btn btn-light btn-sm" href="{{ route('shared-reporting.index',['department_id'=>$deptId]) }}">Open Shared Reporting</a>
+                @endif
+            </div>
+            @endif
+            @include('weekly._shared-review')
             {{-- Section Toggle Bar --}}
             <div class="section-toggles mb-3 overflow-auto">
                 <div class="btn-group w-100 shadow-sm">
@@ -106,7 +128,7 @@
                 <input type="hidden" name="department_id" value="{{ $deptId }}">
 
                 <div class="card card-outline card-primary shadow-sm">
-                    @if(!$canEditWorkflow)
+                    @if(!$canEditWorkflow && !($sharedWorkspace ?? false))
                         <div class="alert alert-warning rounded-0 border-0 mb-0">
                             This weekly period is read-only for your current role. Use the workflow actions on the report page for the next step.
                         </div>
@@ -148,7 +170,7 @@
                                                 $actual = $entry ? $entry->actual_value : 0;
                                                 $currentPlan = $entry && !is_null($entry->planned_value) ? (float)$entry->planned_value : $weeklyTarget;
                                                 $percentage = $isPlanned ? $child->calculateWeeklyAchievement((float)$actual, (float)$currentPlan) : 0;
-                                                $cleanActual = $actual != 0 ? (float)$actual : '';
+                                                $cleanActual = ($sharedWorkspace ?? $sharedSubmission ?? null) ? ($entry ? (float)$actual : '') : ($actual != 0 ? (float)$actual : '');
                                                 $hasStations = Str::contains($child->description, ['Cargo', 'TEU', 'Container', 'RoRo', 'Nagad', 'Empty']);
 
                                                 // Calculate remaining allowed plan
@@ -185,7 +207,7 @@
                                                 <td class="text-right bg-light px-2" style="width: 120px;">
                                                     <input type="number" step="any" @if(!is_null($maxAllowedPlan)) max="{{ $maxAllowedPlan }}" @endif name="entries[{{ $child->id }}][plan_value]"
                                                         class="form-control form-control-sm row-plan-input text-right font-weight-bold text-info border-0 rounded-0"
-                                                        value="{{ !is_null($entry?->planned_value) ? (float)$entry->planned_value : round($weeklyTarget, 2) }}"
+                                                        data-original-number="{{ !is_null($entry?->planned_value) ? (float)$entry->planned_value : $weeklyTarget }}" value="{{ \App\Support\NumberFormatter::format(!is_null($entry?->planned_value) ? (float)$entry->planned_value : $weeklyTarget,3,'.','') }}"
                                                         {{ $repeatsMonthlyPlan || $isCalculatedParent ? 'readonly' : '' }}
                                                         title="{{ $repeatsMonthlyPlan ? 'Monthly plan repeated in every week' : 'Monthly plan distributed across weeks' }}"
                                                         style="background-color: transparent;" placeholder="0">
@@ -194,7 +216,7 @@
                                                     @if($isCalculatedParent)
                                                         <input type="number" step="any" name="entries[{{ $child->id }}][actual]"
                                                             class="form-control form-control-sm performance-input border-0 text-right font-weight-bold"
-                                                            value="{{ $actual }}" readonly title="Calculated from sub-objectives">
+                                                            data-original-number="{{ (($sharedWorkspace ?? $sharedSubmission ?? null) && !$entry) ? '' : $actual }}" value="{{ \App\Support\NumberFormatter::format((($sharedWorkspace ?? $sharedSubmission ?? null) && !$entry) ? '' : $actual,3,'.','') }}" readonly title="Calculated from sub-objectives">
                                                     @elseif($child->is_reference_only)
                                                         <div class="py-2 pr-3 text-right font-weight-bold bg-light">REF</div>
                                                     @elseif($child->template_type === 'machinery')
@@ -202,38 +224,38 @@
                                                         <div class="d-flex machinery-grid bg-white">
                                                             <input type="number" step="1" name="entries[{{ $child->id }}][metadata][qty]" 
                                                                 class="form-control form-control-sm border-0 bg-transparent text-center machinery-qty" 
-                                                                value="{{ $meta['qty'] ?? '' }}" placeholder="Qty">
-                                                            <input type="number" step="0.5" name="entries[{{ $child->id }}][metadata][time]" 
+                                                                data-original-number="{{ $meta['qty'] ?? '' }}" value="{{ \App\Support\NumberFormatter::format($meta['qty'] ?? '',3,'.','') }}" placeholder="Qty">
+                                                            <input type="number" step="any" name="entries[{{ $child->id }}][metadata][time]" 
                                                                 class="form-control form-control-sm border-0 bg-transparent text-center machinery-time" 
-                                                                value="{{ $meta['time'] ?? 10 }}" placeholder="Hrs">
+                                                                data-original-number="{{ $meta['time'] ?? 10 }}" value="{{ \App\Support\NumberFormatter::format($meta['time'] ?? 10,3,'.','') }}" placeholder="Hrs">
                                                             <input type="number" step="1" name="entries[{{ $child->id }}][metadata][days]" 
                                                                 class="form-control form-control-sm border-0 bg-transparent text-center machinery-days" 
-                                                                value="{{ $meta['days'] ?? 7 }}" placeholder="Days">
+                                                                data-original-number="{{ $meta['days'] ?? 7 }}" value="{{ \App\Support\NumberFormatter::format($meta['days'] ?? 7,3,'.','') }}" placeholder="Days">
                                                             <input type="text" name="entries[{{ $child->id }}][actual]" 
                                                                 class="form-control form-control-sm border-0 bg-light text-right font-weight-bold machinery-actual" 
-                                                                value="{{ $cleanActual }}" readonly>
+                                                                data-original-number="{{ $cleanActual }}" value="{{ \App\Support\NumberFormatter::format($cleanActual,3,'.','') }}" readonly>
                                                         </div>
                                                     @elseif($child->template_type === 'truck_haulage')
                                                         @php $meta = $entry?->metadata ?? []; @endphp
                                                         <div class="d-flex truck-grid bg-white">
                                                             <input type="number" step="1" name="entries[{{ $child->id }}][metadata][count]" 
                                                                 class="form-control form-control-sm border-0 bg-transparent text-center truck-count" 
-                                                                value="{{ $meta['count'] ?? '' }}" placeholder="Qty">
-                                                            <input type="number" step="0.01" name="entries[{{ $child->id }}][metadata][cycle]" 
+                                                                data-original-number="{{ $meta['count'] ?? '' }}" value="{{ \App\Support\NumberFormatter::format($meta['count'] ?? '',3,'.','') }}" placeholder="Qty">
+                                                            <input type="number" step="any" name="entries[{{ $child->id }}][metadata][cycle]" 
                                                                 class="form-control form-control-sm border-0 bg-transparent text-center truck-cycle" 
-                                                                value="{{ $meta['cycle'] ?? '' }}" placeholder="Cycle">
-                                                            <input type="number" step="0.1" name="entries[{{ $child->id }}][metadata][tone]" 
+                                                                data-original-number="{{ $meta['cycle'] ?? '' }}" value="{{ \App\Support\NumberFormatter::format($meta['cycle'] ?? '',3,'.','') }}" placeholder="Cycle">
+                                                            <input type="number" step="any" name="entries[{{ $child->id }}][metadata][tone]" 
                                                                 class="form-control form-control-sm border-0 bg-transparent text-center truck-tone" 
-                                                                value="{{ $meta['tone'] ?? 40 }}" placeholder="Tone">
+                                                                data-original-number="{{ $meta['tone'] ?? 40 }}" value="{{ \App\Support\NumberFormatter::format($meta['tone'] ?? 40,3,'.','') }}" placeholder="Tone">
                                                             <input type="text" name="entries[{{ $child->id }}][actual]" 
                                                                 class="form-control form-control-sm border-0 bg-light text-right font-weight-bold truck-actual" 
-                                                                value="{{ $cleanActual }}" readonly>
+                                                                data-original-number="{{ $cleanActual }}" value="{{ \App\Support\NumberFormatter::format($cleanActual,3,'.','') }}" readonly>
                                                         </div>
                                                     @elseif($child->isTemporal())
                                                         <input type="text"
                                                             name="entries[{{ $child->id }}][actual]"
                                                             class="form-control form-control-sm performance-input temporal-input border-0 rounded-0 h-100 py-2"
-                                                            value="{{ $child->formatTemporal($actual) }}" data-plan="{{ $weeklyTarget }}"
+                                                            value="{{ (($sharedWorkspace ?? $sharedSubmission ?? null) && !$entry) ? '' : $child->formatTemporal($actual) }}" data-plan="{{ $weeklyTarget }}"
                                                             data-unit="{{ $child->unit }}"
                                                             id="input-{{ $child->id }}" placeholder="00:00"
                                                             style="background-color: transparent; text-align: right; font-weight: bold;">
@@ -241,7 +263,7 @@
                                                         <input type="number" step="any"
                                                             name="entries[{{ $child->id }}][actual]"
                                                             class="form-control form-control-sm performance-input border-0 rounded-0 h-100 py-2"
-                                                            value="{{ $cleanActual }}" data-plan="{{ $weeklyTarget }}"
+                                                            data-original-number="{{ $cleanActual }}" value="{{ \App\Support\NumberFormatter::format($cleanActual,3,'.','') }}" data-plan="{{ $weeklyTarget }}"
                                                             id="input-{{ $child->id }}" placeholder="0"
                                                             style="background-color: transparent; text-align: right; font-weight: bold;">
                                                     @endif
@@ -251,7 +273,7 @@
                                                 @endphp
                                                 <td
                                                     class="text-center percentage-display font-weight-bold" style="color: {{ $childBand['color'] }};">
-                                                    {{ $child->is_reference_only ? '-' : \App\Support\NumberFormatter::format($percentage,3) . '%' }}
+                                                    {{ ($child->is_reference_only || (($sharedWorkspace ?? $sharedSubmission ?? null) && !$entry)) ? '-' : \App\Support\NumberFormatter::format($percentage,3) . '%' }}
                                                 </td>
                                             </tr>
                                             {{-- Remarks Row for every activity --}}
@@ -278,7 +300,7 @@
                                                     $subActual = $subEntry ? $subEntry->actual_value : 0;
                                                     $subCurrentPlan = $subEntry && !is_null($subEntry->planned_value) ? (float)$subEntry->planned_value : $subWeeklyTarget;
                                                     $subPercentage = $subIsPlanned ? $subChild->calculateWeeklyAchievement((float)$subActual, (float)$subCurrentPlan) : 0;
-                                                    $subCleanActual = $subActual != 0 ? (float)$subActual : '';
+                                                    $subCleanActual = ($sharedWorkspace ?? $sharedSubmission ?? null) ? ($subEntry ? (float)$subActual : '') : ($subActual != 0 ? (float)$subActual : '');
 
                                                     // Calculate remaining allowed plan
                                                     $subOtherWeeksPlan = ($monthlyPlanSums->get($subPlanItem?->id) ?? 0) - ($subEntry && !is_null($subEntry->planned_value) ? (float)$subEntry->planned_value : 0);
@@ -301,7 +323,7 @@
                                                     <td class="text-right bg-light px-2" style="width: 100px;">
                                                         <input type="number" step="any" @if(!is_null($subMaxAllowedPlan)) max="{{ $subMaxAllowedPlan }}" @endif name="entries[{{ $subChild->id }}][plan_value]"
                                                             class="form-control form-control-sm row-plan-input text-right font-weight-bold text-info border-0 rounded-0 p-1 bg-transparent"
-                                                            value="{{ !is_null($subEntry?->planned_value) ? (float)$subEntry->planned_value : round($subWeeklyTarget, 2) }}"
+                                                            data-original-number="{{ !is_null($subEntry?->planned_value) ? (float)$subEntry->planned_value : $subWeeklyTarget }}" value="{{ \App\Support\NumberFormatter::format(!is_null($subEntry?->planned_value) ? (float)$subEntry->planned_value : $subWeeklyTarget,3,'.','') }}"
                                                             {{ $subRepeatsMonthlyPlan ? 'readonly' : '' }}
                                                             title="{{ $subRepeatsMonthlyPlan ? 'Monthly plan repeated in every week' : 'Monthly plan distributed across weeks' }}" placeholder="0">
                                                     </td>
@@ -312,7 +334,7 @@
                                                             <input type="text"
                                                                 name="entries[{{ $subChild->id }}][actual]"
                                                                 class="form-control form-control-sm performance-input temporal-input border-0 rounded-0 h-100 py-1"
-                                                                value="{{ $subChild->formatTemporal($subActual) }}" data-plan="{{ $subWeeklyTarget }}"
+                                                                value="{{ (($sharedWorkspace ?? $sharedSubmission ?? null) && !$subEntry) ? '' : $subChild->formatTemporal($subActual) }}" data-plan="{{ $subWeeklyTarget }}"
                                                                 data-unit="{{ $subChild->unit }}"
                                                                 id="input-{{ $subChild->id }}"
                                                                 placeholder="00:00"
@@ -321,7 +343,7 @@
                                                             <input type="number" step="any"
                                                                 name="entries[{{ $subChild->id }}][actual]"
                                                                 class="form-control form-control-sm performance-input border-0 rounded-0 h-100 py-1"
-                                                                value="{{ $subCleanActual }}" data-plan="{{ $subWeeklyTarget }}"
+                                                                data-original-number="{{ $subCleanActual }}" value="{{ \App\Support\NumberFormatter::format($subCleanActual,3,'.','') }}" data-plan="{{ $subWeeklyTarget }}"
                                                                 id="input-{{ $subChild->id }}" placeholder="0"
                                                                 style="background-color: transparent; text-align: right; font-size: 0.85rem;">
                                                         @endif
@@ -331,7 +353,7 @@
                                                     @endphp
                                                     <td
                                                         class="text-center percentage-display small" style="color: {{ $subBand['color'] }};">
-                                                        {{ $subChild->is_reference_only ? '-' : \App\Support\NumberFormatter::format($subPercentage,3) . '%' }}
+                                                        {{ ($subChild->is_reference_only || (($sharedWorkspace ?? $sharedSubmission ?? null) && !$subEntry)) ? '-' : \App\Support\NumberFormatter::format($subPercentage,3) . '%' }}
                                                     </td>
                                                 </tr>
                                             @endforeach
@@ -569,7 +591,7 @@
                         let days = parseFloat(row.find('.machinery-days').val()) || 0;
                         let actual = qty * time * days;
                         
-                        row.find('.machinery-actual').val(formatNumber(actual));
+                        row.find('.machinery-actual').each(function () { setNumberInput(this, actual); });
                         updatePercentage(row, actual);
                     });
 
@@ -581,7 +603,7 @@
                         let tone = parseFloat(row.find('.truck-tone').val()) || 0;
                         let actual = count * cycle * tone; 
                         
-                        row.find('.truck-actual').val(formatNumber(actual));
+                        row.find('.truck-actual').each(function () { setNumberInput(this, actual); });
                         updatePercentage(row, actual);
                     });
 
@@ -655,12 +677,12 @@
                             });
                             if (type === 'average' && children.length) { plan /= children.length; actual /= children.length; }
                             if (type === 'weighted') { plan = 100; actual = children.length ? actual / children.length : 0; }
-                            parent.find('.row-plan-input').val(formatNumber(plan));
-                            parent.find('.performance-input').val(formatNumber(actual));
+                            parent.find('.row-plan-input').each(function () { setNumberInput(this, plan); });
+                            parent.find('.performance-input').each(function () { setNumberInput(this, actual); });
                             updatePercentage(parent, actual);
                         });
                     }
-                    recalculateParents();
+                    @unless($sharedWorkspace ?? $sharedSubmission ?? null) recalculateParents(); @endunless
 
                     // Station Matrix Support
                     let activePlanItemId = null;
@@ -704,7 +726,7 @@
 
                         // Update the main performance input
                         let mainInput = $('#input-' + activePlanItemId);
-                        mainInput.val(formatNumber(total)).trigger('input');
+                        mainInput.each(function () { setNumberInput(this, total); }).trigger('input');
 
                         // Store hidden inputs for station data
                         let container = mainInput.closest('td');

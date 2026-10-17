@@ -215,7 +215,7 @@
                                                     <label for="progress_percentage">Current Completion %</label>
                                                     <input type="number" name="progress_percentage" class="form-control"
                                                         min="{{ $task->completion_percentage }}" max="100"
-                                                        value="{{ \App\Support\NumberFormatter::format($task->completion_percentage) }}" required>
+                                                        data-original-number="{{ $task->completion_percentage }}" value="{{ \App\Support\NumberFormatter::format($task->completion_percentage,3,'.','') }}" step="any" required>
                                                     <small class="text-muted">Must be greater than previous progress
                                                         ({{ \App\Support\NumberFormatter::format($task->completion_percentage) }}%)</small>
                                                 </div>

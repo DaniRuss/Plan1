@@ -56,7 +56,7 @@
                                     <label class="small mb-1" for="{{ $key }}_target">{{ $label }}</label>
                                     <input type="number" step="any" min="0" name="{{ $key }}_target" id="{{ $key }}_target"
                                         class="form-control form-control-sm target-month"
-                                        value="{{ old($key . '_target', $record?->{$key . '_target'}) }}">
+                                        data-original-number="{{ old($key . '_target', $record?->{$key . '_target'}) }}" value="{{ \App\Support\NumberFormatter::format(old($key . '_target', $record?->{$key . '_target'}),3,'.','') }}">
                                 </div>
                             @endforeach
                         </div>
@@ -64,7 +64,7 @@
                             <label class="small font-weight-bold mb-1" for="{{ $quarter }}_target">{{ strtoupper($quarter) }} Target</label>
                             <input type="number" step="any" min="0" name="{{ $quarter }}_target" id="{{ $quarter }}_target"
                                 class="form-control font-weight-bold quarter-target"
-                                value="{{ old($quarter . '_target', $record?->{$quarter . '_target'}) }}">
+                                data-original-number="{{ old($quarter . '_target', $record?->{$quarter . '_target'}) }}" value="{{ \App\Support\NumberFormatter::format(old($quarter . '_target', $record?->{$quarter . '_target'}),3,'.','') }}">
                             <small class="quarter-calculation-note text-muted"></small>
                         </div>
                     </div>

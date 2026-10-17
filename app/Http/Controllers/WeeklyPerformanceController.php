@@ -16,6 +16,10 @@ use Symfony\Component\HttpFoundation\Response;
 
 class WeeklyPerformanceController extends Controller
 {
+    public function recalculateSharedPeriod(\App\Models\ReportingSubmission $submission, int $userId): void
+    {
+        $this->performParentRollups($submission->year,$submission->month,$submission->week,$submission->status,$userId,$submission->plan_id);
+    }
     /**
      * Show the Weekly Performance Dashboard (Navigation Hub).
      */
@@ -220,7 +224,13 @@ class WeeklyPerformanceController extends Controller
             ->with(['stationData', 'submittedBy', 'directorateReviewer', 'chiefReviewer', 'planReportReviewer', 'headOfficeReviewer'])
             ->get();
 
-        if (!$this->canUserViewPeriod($user, $periodEntries->first()?->workflow_status, $periodEntries->isNotEmpty())) {
+        $sharedSubmission = \App\Models\ReportingSubmission::where(['department_id'=>$deptId,'year'=>$year,'month'=>strtolower($month),'week'=>$week,'frequency'=>'weekly'])->first();
+        if ($sharedSubmission) $periodEntries = $this->publishedSharedEntries($sharedSubmission);
+        $sharedWorkspace = (bool)$sharedSubmission || (\App\Models\ReportingTeam::where('department_id',$deptId)->exists()
+            && !$periodEntries->contains(fn ($row) => !in_array($row->workflow_status,[null,'','draft'],true) || $row->status === 'approved'));
+        if ($sharedWorkspace && !$sharedSubmission) $periodEntries = collect();
+
+        if (!$sharedSubmission && !$this->canUserViewPeriod($user, $periodEntries->first()?->workflow_status, $periodEntries->isNotEmpty())) {
             return redirect()->route('weekly.dashboard', ['year' => $year, 'department_id' => $deptId])
                 ->with('error', 'This weekly period is not currently assigned to your role.');
         }
@@ -230,6 +240,14 @@ class WeeklyPerformanceController extends Controller
         $workflowState = $this->buildWorkflowState($periodEntries->first());
         $canEditWorkflow = $this->canUserEditPeriod($user, $workflowState['key']);
         $workflowActions = $this->availableWorkflowActions($user, $workflowState['key']);
+        if ($sharedSubmission) {
+            $canEditWorkflow = false;
+            $workflowActions = array_fill_keys(array_keys($workflowActions),false);
+            $workflowState = array_replace($workflowState,['key'=>$sharedSubmission->status,'label'=>$sharedSubmission->department_approved_at ? (str_starts_with($sharedSubmission->status,'returned_') || in_array($sharedSubmission->status,['draft','submitted_to_directorate','submitted_to_chief']) ? 'Returned for correction ? last department-approved results' : 'Department approved') : 'Awaiting department chief approval','badge'=>'info','note'=>$sharedSubmission->workflow_note]);
+        }
+
+
+        if ($sharedWorkspace) { $canEditWorkflow = false; $workflowActions = array_fill_keys(array_keys($workflowActions),false); }
 
         // Fetch sums of existing plan entries for this month (across all weeks) to prevent over-planning
         $monthlyPlanSums = $this->periodEntriesQuery((int) $deptId, (int) $year, strtolower($month), null, 'weekly')
@@ -268,7 +286,9 @@ class WeeklyPerformanceController extends Controller
             'workflowState',
             'canEditWorkflow',
             'workflowActions',
-            'attachments'
+            'attachments',
+            'sharedSubmission',
+            'sharedWorkspace'
         ));
     }
 
@@ -616,7 +636,13 @@ class WeeklyPerformanceController extends Controller
             ->with(['planItem', 'stationData', 'submittedBy', 'directorateReviewer', 'chiefReviewer', 'planReportReviewer', 'headOfficeReviewer'])
             ->get();
 
-        if (!$this->canUserViewPeriod($user, $periodEntries->first()?->workflow_status, $periodEntries->isNotEmpty())) {
+        $sharedSubmission = \App\Models\ReportingSubmission::where(['department_id'=>$deptId,'year'=>$year,'month'=>strtolower($month),'week'=>$week,'frequency'=>'weekly'])->first();
+        if ($sharedSubmission) $periodEntries = $this->publishedSharedEntries($sharedSubmission);
+        $sharedWorkspace = (bool)$sharedSubmission || (\App\Models\ReportingTeam::where('department_id',$deptId)->exists()
+            && !$periodEntries->contains(fn ($row) => !in_array($row->workflow_status,[null,'','draft'],true) || $row->status === 'approved'));
+        if ($sharedWorkspace && !$sharedSubmission) $periodEntries = collect();
+
+        if (!$sharedSubmission && !$this->canUserViewPeriod($user, $periodEntries->first()?->workflow_status, $periodEntries->isNotEmpty())) {
             return redirect()->route('weekly.dashboard', ['year' => $year, 'department_id' => $deptId])
                 ->with('error', 'This weekly period is not currently assigned to your role.');
         }
@@ -624,6 +650,12 @@ class WeeklyPerformanceController extends Controller
         $entries = $periodEntries->keyBy('plan_item_id');
         $workflowState = $this->buildWorkflowState($periodEntries->first());
         $workflowActions = $this->availableWorkflowActions($user, $workflowState['key']);
+        if ($sharedSubmission) {
+            $canEditWorkflow = false;
+            $workflowActions = array_fill_keys(array_keys($workflowActions),false);
+            $workflowState = array_replace($workflowState,['key'=>$sharedSubmission->status,'label'=>$sharedSubmission->department_approved_at ? (str_starts_with($sharedSubmission->status,'returned_') || in_array($sharedSubmission->status,['draft','submitted_to_directorate','submitted_to_chief']) ? 'Returned for correction ? last department-approved results' : 'Department approved') : 'Awaiting department chief approval','badge'=>'info','note'=>$sharedSubmission->workflow_note]);
+        }
+
 
         if ($user->hasPermission('view_final_approved_records') && !in_array($workflowState['key'], ['reviewed_no_correction_required','approved_by_head_office'], true)) {
             abort(403, 'Head office can only view final approved performance reports.');
@@ -777,7 +809,7 @@ class WeeklyPerformanceController extends Controller
         $reportFrequency = $this->operationalFrequency((int) $deptId);
         return view('weekly.report', compact(
             'year', 'month', 'week', 'dept', 'deptId',
-            'isAdmin', 'plan', 'reportRows', 'weekLabel', 'workflowState', 'workflowActions', 'canSelectDepartment', 'attachments', 'reportFrequency'
+            'isAdmin', 'plan', 'reportRows', 'weekLabel', 'workflowState', 'workflowActions', 'canSelectDepartment', 'attachments', 'reportFrequency', 'sharedSubmission'
         ));
     }
 
@@ -816,18 +848,31 @@ class WeeklyPerformanceController extends Controller
                 fputcsv($f, [
                     $row['sno'],
                     $indent . $row['label'],
-                    $row['weight'],
+                    \App\Support\NumberFormatter::format($row['weight']),
                     $row['unit'],
-                    $row['baseline'],
-                    $row['is_reference'] ? '' : \App\Support\NumberFormatter::format((float)($row['plan'] ?? 0),3),
-                    \App\Support\NumberFormatter::format((float)($row['actual'] ?? 0),3),
-                    $row['is_reference'] ? '' : ($row['percentage'] !== null ? round($row['percentage'], 1) . '%' : ''),
+                    \App\Support\NumberFormatter::format($row['baseline']),
+                    $row['is_reference'] ? '' : ($row['plan'] === null ? 'N/A' : \App\Support\NumberFormatter::format($row['plan'],3)),
+                    $row['actual'] === null ? 'N/A' : \App\Support\NumberFormatter::format($row['actual'],3),
+                    $row['is_reference'] ? '' : ($row['percentage'] !== null ? \App\Support\NumberFormatter::format($row['percentage']) . '%' : ''),
                 ]);
             }
             fclose($f);
         };
 
         return response()->stream($callback, 200, $headers);
+    }
+
+    private function publishedSharedEntries(\App\Models\ReportingSubmission $submission)
+    {
+        return collect($submission->department_snapshot ?? [])->map(function ($attributes) {
+            $stations = $attributes['station_data'] ?? [];
+            unset($attributes['station_data']);
+            $entry = new \App\Models\WeeklyPerformance;
+            $entry->forceFill($attributes)->syncOriginal();
+            $entry->exists = true;
+            $entry->setRelation('stationData',collect($stations)->map(fn ($row)=>(new \App\Models\WeeklyStationData)->forceFill($row)));
+            return $entry;
+        });
     }
 
     private function periodEntriesQuery(int $deptId, int $year, string $month, ?int $week = null, ?string $frequency = null)
@@ -961,7 +1006,7 @@ class WeeklyPerformanceController extends Controller
                 'reviewed_at' => $entry?->head_office_reviewed_at,
             ],
             'reviewed_no_correction_required' => [
-                'key' => $status, 'label' => 'Reviewed — No Correction Required', 'badge' => 'success',
+                'key' => $status, 'label' => 'Reviewed â€” No Correction Required', 'badge' => 'success',
                 'note' => $entry?->workflow_note, 'submitted_by' => $entry?->submittedBy?->name,
                 'submitted_at' => $entry?->submitted_at, 'reviewed_by' => $entry?->planReportReviewer?->name,
                 'reviewed_at' => $entry?->plan_report_reviewed_at,
@@ -1347,3 +1392,4 @@ class WeeklyPerformanceController extends Controller
     }
 
 }
+

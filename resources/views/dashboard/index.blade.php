@@ -10,6 +10,7 @@
  </section>
 
  @if($workspaceNotice)<div class="alert alert-info" role="status">{{ $workspaceNotice }}</div>@endif
+ @if($sharedReporting && $sharedReporting['reports'])<div class="card card-body mb-3"><div class="d-flex flex-wrap justify-content-between align-items-center"><div><strong>Shared reporting workspace</strong><p class="mb-0 text-muted">{{ $sharedReporting['reports'] }} reports · {{ $sharedReporting['queue'] }} items in your action queue · {{ $sharedReporting['returned'] }} returned sections · {{ $sharedReporting['overdue'] }} weekly reports not submitted by their deadline</p></div><a href="{{ route('shared-reporting.index') }}" class="btn btn-outline-primary mt-2">Open shared reporting</a></div></div>@endif
 
  @if($performanceAnalytics)<p class="text-muted small">Workspace data: {{ $workspaceYear ?? 'No approved plan year available' }}. Counts are performance records, not submission batches. @if($workspaceDailyRecords){{ $workspaceDailyRecords }} daily entries are available in the Daily Workbench; weekly summaries are counted separately.@endif</p>@endif
 

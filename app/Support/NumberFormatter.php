@@ -8,6 +8,7 @@ final class NumberFormatter
     public static function format($value, int $maximumDecimals = 3, string $decimalSeparator = '.', string $thousandsSeparator = ','): string
     {
         if ($value === null || $value === '') return '';
+        if (!is_numeric($value)) return (string) $value;
         $precision = min(3, max(0, $maximumDecimals));
         $rounded = round((float) $value, $precision, PHP_ROUND_HALF_UP);
         if ($rounded == 0) $rounded = 0;

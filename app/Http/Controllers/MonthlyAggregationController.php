@@ -16,6 +16,11 @@ use App\Services\FidelityCalculator;
 
 class MonthlyAggregationController extends Controller
 {
+    public function recalculateSharedPeriod(\App\Models\ReportingSubmission $submission): void
+    {
+        $items = $submission->plan->items()->forReportingFrequency('monthly')->with('strategicObjective.children')->get();
+        $this->performParentRollups($items,$submission->year.'-'.$submission->month,$submission->status);
+    }
     protected $calculator;
 
     public function __construct(\App\Services\ScoreCalculator $calculator)

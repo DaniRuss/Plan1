@@ -91,9 +91,9 @@
                                 <div class="form-group mb-4">
                                     <label class="font-weight-bold text-dark">Current Progress %</label>
                                     <div class="input-group shadow-sm">
-                                        <input type="number" name="completion_percentage" step="0.01"
+                                        <input type="number" name="completion_percentage" step="any"
                                             class="form-control @error('completion_percentage') is-invalid @enderror"
-                                            value="{{ old('completion_percentage', $project->completion_percentage) }}"
+                                            data-original-number="{{ old('completion_percentage', $project->completion_percentage) }}" value="{{ \App\Support\NumberFormatter::format(old('completion_percentage', $project->completion_percentage),3,'.','') }}"
                                             min="0" max="100" required>
                                         <div class="input-group-append">
                                             <span class="input-group-text font-weight-bold">%</span>
@@ -126,9 +126,9 @@
                             <div class="col-md-4">
                                 <div class="form-group mb-4">
                                     <label class="font-weight-bold text-dark">Total Budget</label>
-                                    <input type="number" name="total_budget" step="0.01" 
+                                    <input type="number" name="total_budget" step="any" 
                                            class="form-control @error('total_budget') is-invalid @enderror" 
-                                           value="{{ old('total_budget', $project->total_budget) }}" min="0">
+                                           data-original-number="{{ old('total_budget', $project->total_budget) }}" value="{{ \App\Support\NumberFormatter::format(old('total_budget', $project->total_budget),3,'.','') }}" min="0">
                                     @error('total_budget') <span class="invalid-feedback">{{ $message }}</span> @enderror
                                 </div>
                             </div>

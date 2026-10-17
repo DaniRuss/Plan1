@@ -52,9 +52,9 @@
                                 <div class="form-group">
                                     <label for="weight" id="weightLabel">Weight (Percentage Points) <span
                                             id="weightRequired" class="text-danger">*</span></label>
-                                    <input type="number" step="0.0001" name="weight" id="weight"
+                                    <input type="number" step="any" name="weight" id="weight"
                                         class="form-control @error('weight') is-invalid @enderror"
-                                        value="{{ old('weight', $objective->weight) }}" required min="0">
+                                        data-original-number="{{ old('weight', $objective->weight) }}" value="{{ \App\Support\NumberFormatter::format(old('weight', $objective->weight),3,'.','') }}" required min="0">
                                     @error('weight') <span class="invalid-feedback">{{ $message }}</span> @enderror
                                 </div>
                             </div>
@@ -141,7 +141,7 @@
                                     <label for="annual_target">Annual Target</label>
                                     <input type="number" step="any" name="annual_target" id="annual_target"
                                         class="form-control @error('annual_target') is-invalid @enderror"
-                                        value="{{ old('annual_target', $objective->annual_target) }}"
+                                        data-original-number="{{ old('annual_target', $objective->annual_target) }}" value="{{ \App\Support\NumberFormatter::format(old('annual_target', $objective->annual_target),3,'.','') }}"
                                         oninput="validateAnnualTarget()">
                                     @error('annual_target') <span class="invalid-feedback">{{ $message }}</span> @enderror
                                     <small id="targetError" class="text-danger d-none">Percentage cannot exceed 100%</small>
@@ -151,7 +151,7 @@
                                 <div class="form-group">
                                     <label for="baseline_value">Baseline Value</label>
                                     <input type="number" step="any" name="baseline_value" class="form-control"
-                                        value="{{ old('baseline_value', $objective->baseline_value) }}">
+                                        data-original-number="{{ old('baseline_value', $objective->baseline_value) }}" value="{{ \App\Support\NumberFormatter::format(old('baseline_value', $objective->baseline_value),3,'.','') }}">
                                 </div>
                             </div>
                             <div class="col-md-3">

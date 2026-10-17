@@ -85,6 +85,7 @@ class DashboardController extends Controller
             ?? optional($employee ? $employee->department : null)->name
             ?? (app(\App\Services\DashboardWorkspace::class)->organizationWide($user) ? 'Organization-wide' : 'No department assigned');
         $data['unreadNotifications'] = $user->unreadNotifications()->count();
+        $data['sharedReporting'] = $user->hasPermission('view_performance') ? app(\App\Services\SharedReporting::class)->dashboard($user) : null;
         $workspace = app(\App\Services\DashboardWorkspace::class)->snapshot($user, $request->integer('performance_year') ?: null);
         $data['workspaceYear'] = $workspace['year'];
         $data['workspaceDailyRecords'] = $workspace['daily'];

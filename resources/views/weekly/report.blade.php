@@ -35,6 +35,7 @@
     $referenceBg = \App\Models\Setting::get('performance_reference_bg', '#cce5ff');
     $referenceText = \App\Models\Setting::get('performance_reference_text', '#004085');
 @endphp
+@include('weekly._shared-review')
 <div class="content-header p-2 no-print">
     <div class="container-fluid">
         <div class="d-flex justify-content-between align-items-center bg-white p-2 rounded border shadow-sm mb-3">
