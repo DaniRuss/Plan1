@@ -1,158 +1,67 @@
 @extends('layouts.app')
-
-@section('title', 'Data Validation & Quality Sentinel')
-
+@section('page_header_hidden', '1')
+@section('title','Quality Sentinel')
 @section('content')
-    <div class="content-header p-2">
-        <div class="container-fluid">
-            <div class="row align-items-center bg-white p-3 rounded border shadow-sm mb-4">
-                <div class="col-md-6">
-                    <h4 class="m-0 font-weight-bold text-dark">
-                        <i class="fas fa-shield-alt text-danger mr-2"></i> Data Quality sentinel
-                    </h4>
-                    <p class="text-muted small m-0">Automated diagnostic system for the IPRPMS operational layer.</p>
-                </div>
-                <div class="col-md-6 text-right">
-                    <form action="{{ route('quality.console') }}" method="GET" class="form-inline d-inline-block">
-                        <select name="month" class="form-control form-control-sm mr-2" onchange="this.form.submit()">
-                            @foreach($months as $m)
-                                <option value="{{ $m }}" {{ $month == $m ? 'selected' : '' }}>{{ ucfirst($m) }}</option>
-                            @endforeach
-                        </select>
-                        <select name="year" class="form-control form-control-sm" onchange="this.form.submit()">
-                            @for($y = 2017; $y <= 2026; $y++)
-                                <option value="{{ $y }}" {{ $year == $y ? 'selected' : '' }}>{{ $y }}</option>
-                            @endfor
-                        </select>
-                    </form>
-                </div>
-            </div>
+@php
+ $scopeQuery=array_merge(request()->except('page','download'),['year'=>$year,'month'=>$month]);
+ $totalIssues=$stats['critical']+$stats['warning']+$stats['review'];
+@endphp
+<div class="qs">
+    <section class="qs-hero">
+        <div class="qs-hero-copy"><span class="qs-eyebrow"><i class="fas fa-shield-alt mr-2"></i> REPORTING ASSURANCE</span>
+        <h1>Quality Sentinel<span class="qs-dot"></span></h1>
+        <p>Find the gaps. Verify the exceptions. Move reporting forward.</p>
+        <div class="qs-hero-meta"><span><i class="far fa-calendar-alt mr-1"></i> {{ ucfirst($month) }} {{ $year }}</span><span>{{ count($departmentRows) }} departments in scope</span><span>Scanned {{ now()->format('d M, H:i') }}</span></div></div>
+        <div class="qs-hero-action"><span class="qs-live"><span></span> Database scan</span>
+        <a class="qs-export" href="{{ route('quality.console',array_merge($scopeQuery,['download'=>'csv'])) }}"><i class="fas fa-download mr-2"></i> Export findings</a>
+        <small>Export follows your active filters</small></div>
+    </section>
 
-            <div class="row">
-                {{-- Quality Metrics --}}
-                <div class="col-md-4">
-                    <div class="card shadow-sm border-0 bg-primary text-white mb-4">
-                        <div class="card-body text-center py-4">
-                            <h6 class="text-uppercase small font-weight-bold opacity-75">Reporting Health Score</h6>
-                            <div class="h1 font-weight-bold mb-0">{{ $stats['health_score'] }}%</div>
-                            <div class="progress progress-xxs mt-2 bg-primary-dark">
-                                <div class="progress-bar bg-white" style="width: {{ $stats['health_score'] }}%"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="card shadow-sm border-0 mb-4">
-                        <div class="card-body text-center py-4">
-                            <h6 class="text-uppercase small font-weight-bold text-muted">Weekly Data Completion</h6>
-                            <div class="h1 font-weight-bold mb-0 text-dark">{{ $stats['completion_rate'] }}%</div>
-                            <div class="small text-success font-weight-bold mt-1">↗ 4% from last month</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="card shadow-sm border-0 mb-4">
-                        <div class="card-body text-center py-4">
-                            <h6 class="text-uppercase small font-weight-bold text-muted">Active Alerts</h6>
-                            <div class="h1 font-weight-bold mb-0 text-danger">{{ count($alerts) }}</div>
-                            <div class="small text-muted mt-1">Requires Immediate Attention</div>
-                        </div>
-                    </div>
-                </div>
+    <form method="GET" action="{{ route('quality.console') }}" class="qs-filters" aria-label="Quality scan filters">
+        <div><label for="qs-year">Plan year</label><select id="qs-year" name="year" class="form-control">@foreach($years as $y)<option value="{{ $y }}" @selected($year==$y)>{{ $y }}</option>@endforeach</select></div>
+        <div><label for="qs-month">Reporting month</label><select id="qs-month" name="month" class="form-control">@foreach($months as $m)<option value="{{ $m }}" @selected($month===$m)>{{ ucfirst($m) }}</option>@endforeach</select></div>
+        <div class="qs-dept"><label for="qs-department">Department</label><select id="qs-department" name="department_id" class="form-control"><option value="">All departments</option>@foreach($departments as $d)<option value="{{ $d->id }}" @selected(($filters['department_id']??'')==$d->id)>{{ $d->name }}</option>@endforeach</select></div>
+        <div><label for="qs-severity">Priority</label><select id="qs-severity" name="severity" class="form-control"><option value="">All priorities</option>@foreach(['critical'=>'Critical','warning'=>'Verify','review'=>'Review'] as $key=>$label)<option value="{{ $key }}" @selected(($filters['severity']??'')===$key)>{{ $label }}</option>@endforeach</select></div>
+        <div><label for="qs-rule">Check</label><select id="qs-rule" name="rule" class="form-control"><option value="">All checks</option>@foreach(['missing'=>'Missing actuals','outlier'=>'Above 200%','zero_plan'=>'Zero plan','approval'=>'Pending approval'] as $key=>$label)<option value="{{ $key }}" @selected(($filters['rule']??'')===$key)>{{ $label }}</option>@endforeach</select></div>
+        <div class="qs-search"><label for="qs-search">Find an activity</label><input id="qs-search" name="search" value="{{ $filters['search']??'' }}" maxlength="200" class="form-control" placeholder="Department, code or activity"></div>
+        <button class="btn qs-apply" type="submit"><i class="fas fa-sliders-h mr-1"></i> Apply filters</button>
+    </form>
 
-                {{-- Alerts List --}}
-                <div class="col-md-12">
-                    <div class="card shadow-sm border-0 overflow-hidden">
-                        <div class="card-header bg-light py-3 d-flex justify-content-between align-items-center">
-                            <h6 class="m-0 font-weight-bold text-muted uppercase small">Active Diagnostic Alerts</h6>
-                            <button class="btn btn-sm btn-outline-danger px-3 rounded-pill bold">
-                                <i class="fas fa-paper-plane mr-1"></i> Notify All Departments
-                            </button>
-                        </div>
-                        <div class="card-body p-0">
-                            @if(empty($alerts))
-                                <div class="text-center py-5">
-                                    <i class="fas fa-check-circle text-success h1 mb-3"></i>
-                                    <h5 class="font-weight-bold">Zero Quality Conflicts Found</h5>
-                                    <p class="text-muted small">All operational data is consistent and complete.</p>
-                                </div>
-                            @else
-                                <div class="table-responsive">
-                                    <table class="table table-hover m-0">
-                                        <thead class="bg-light small">
-                                            <tr>
-                                                <th width="100" class="pl-4">SEVERITY</th>
-                                                <th width="150">CATEGORY</th>
-                                                <th>DESCRIPTION</th>
-                                                <th width="150" class="text-right pr-4">ACTION</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            @foreach($alerts as $alert)
-                                                <tr class="{{ $alert['type'] == 'critical' ? 'bg-light-danger' : '' }}">
-                                                    <td class="pl-4 align-middle">
-                                                        <span
-                                                            class="badge badge-pill badge-{{ $alert['type'] == 'critical' ? 'danger' : 'warning' }} px-3">
-                                                            {{ strtoupper($alert['type']) }}
-                                                        </span>
-                                                    </td>
-                                                    <td class="align-middle font-weight-bold small text-muted">
-                                                        {{ $alert['category'] }}
-                                                    </td>
-                                                    <td
-                                                        class="align-middle border-left-{{ $alert['type'] == 'critical' ? 'danger' : 'warning' }} pl-3">
-                                                        <div class="font-weight-bold text-dark">{{ $alert['message'] }}</div>
-                                                    </td>
-                                                    <td class="text-right pr-4 align-middle">
-                                                        <button class="btn btn-xs btn-outline-dark px-3 rounded-pill">
-                                                            Dismiss
-                                                        </button>
-                                                        <a href="{{ $alert['resolve_url'] }}"
-                                                            class="btn btn-xs btn-primary px-3 rounded-pill ml-1">
-                                                            Resolve
-                                                        </a>
-                                                    </td>
-                                                </tr>
-                                            @endforeach
-                                        </tbody>
-                                    </table>
-                                </div>
-                            @endif
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <div class="qs-metrics">
+        <article class="qs-metric"><span class="qs-metric-icon"><i class="fas fa-layer-group"></i></span><h2>Reporting coverage</h2><strong>{{ $stats['coverage']===null ? 'N/A' : $stats['coverage'].'%' }}</strong><p>{{ $stats['reported']+$stats['exempt'] }} / {{ $stats['expected'] }} due activity-periods covered</p><div class="qs-progress"><span style="width:{{ $stats['coverage']??0 }}%"></span></div></article>
+        <article class="qs-metric"><span class="qs-metric-icon qs-teal"><i class="fas fa-check-double"></i></span><h2>Final approval</h2><strong>{{ $stats['approval_rate']===null ? 'N/A' : $stats['approval_rate'].'%' }}</strong><p>{{ $stats['approved'] }} due activity-periods finally approved</p><div class="qs-progress qs-teal"><span style="width:{{ $stats['approval_rate']??0 }}%"></span></div></article>
+        <article class="qs-metric"><span class="qs-metric-icon qs-red"><i class="fas fa-exclamation-circle"></i></span><h2>Missing actuals</h2><strong>{{ $stats['critical'] }}</strong><p>Overdue planned activities requiring an actual</p><a href="{{ route('quality.console',array_merge($scopeQuery,['severity'=>'critical','rule'=>'missing','search'=>null])) }}">Inspect gaps <i class="fas fa-arrow-right ml-1"></i></a></article>
+        <article class="qs-metric"><span class="qs-metric-icon qs-amber"><i class="fas fa-search"></i></span><h2>Exceptions to verify</h2><strong>{{ $stats['warning'] }}</strong><p>{{ $stats['review'] }} recorded results also await final approval</p><a href="{{ route('quality.console',array_merge($scopeQuery,['severity'=>'warning','rule'=>null,'search'=>null])) }}">Review exceptions <i class="fas fa-arrow-right ml-1"></i></a></article>
     </div>
+    <p class="qs-scope-note"><i class="fas fa-info-circle mr-1"></i> Metrics reflect the selected year, month and department. Priority, check and search filters affect the findings queue and export. Approved N/A: {{ $stats['exempt'] }}.</p>
 
-    @push('styles')
-        <style>
-            .bg-primary-dark {
-                background-color: rgba(0, 0, 0, 0.1);
-            }
-
-            .progress-xxs {
-                height: 6px;
-                border-radius: 3px;
-            }
-
-            .bg-light-danger {
-                background-color: #fff5f5 !important;
-            }
-
-            .border-left-danger {
-                border-left: 4px solid #dc3545 !important;
-            }
-
-            .border-left-warning {
-                border-left: 4px solid #ffc107 !important;
-            }
-
-            .btn-xs {
-                padding: 4px 10px;
-                font-size: 0.75rem;
-                font-weight: bold;
-            }
-        </style>
-    @endpush
+    <div class="qs-workspace">
+        <section class="qs-panel qs-queue">
+            <header class="qs-panel-header"><div><span class="qs-eyebrow">PRIORITIZED WORKSPACE</span><h2>Findings queue <span class="qs-count">{{ $alerts->total() }}</span></h2></div><a href="{{ route('quality.console',['year'=>$year,'month'=>$month,'department_id'=>$filters['department_id']??null]) }}" class="qs-reset">Reset queue filters</a></header>
+            <div class="qs-queue-meta"><span><i class="fas fa-sort-amount-down mr-1"></i> Critical gaps first</span><span>{{ $totalIssues }} findings in this scope</span></div>
+            @forelse($alerts as $alert)
+            <article class="qs-finding qs-finding-{{ $alert['severity'] }}">
+                <div class="qs-finding-top"><span class="qs-priority qs-{{ $alert['severity'] }}">{{ ['critical'=>'Critical','warning'=>'Verify','review'=>'Review'][$alert['severity']] }}</span><span class="qs-finding-period">{{ ucfirst($alert['frequency']) }} / {{ $alert['period'] }}</span></div>
+                <div class="qs-finding-body"><div><h3>{{ $alert['title'] }}</h3><p class="qs-activity"><strong>{{ $alert['code'] }}</strong> {{ $alert['activity'] }}</p><p class="qs-detail">{{ $alert['detail'] }}</p><span class="qs-department"><i class="far fa-building mr-1"></i> {{ $alert['department'] }}</span></div><a class="qs-open" href="{{ $alert['url'] }}">Open report <i class="fas fa-arrow-up ml-1" style="transform:rotate(45deg)"></i></a></div>
+            </article>
+            @empty
+            <div class="qs-empty"><div><i class="fas {{ $stats['expected']===0 ? 'fa-calendar-alt' : 'fa-check' }}"></i></div><h3>{{ $stats['expected']===0 ? 'No due activities in this scope' : 'No findings match these filters' }}</h3><p>{{ $stats['expected']===0 ? 'Choose another period or department. Future periods and activities without approved assignments are outside this scan.' : 'Try resetting the queue filters, or inspect department coverage alongside the checks below.' }}</p></div>
+            @endforelse
+            @if($alerts->hasPages())<footer class="qs-pagination">{{ $alerts->links('pagination::bootstrap-4') }}</footer>@endif
+        </section>
+        <aside>
+            <section class="qs-panel"><header class="qs-panel-header"><div><span class="qs-eyebrow">COVERAGE AT A GLANCE</span><h2>Department pulse</h2></div></header>
+            <div class="qs-department-list">@forelse($departmentRows as $row)<a href="{{ route('quality.console',['year'=>$year,'month'=>$month,'department_id'=>$row['id']]) }}" class="qs-department-row"><div><strong>{{ $row['name'] }}</strong><b>{{ $row['coverage']===null ? 'N/A' : $row['coverage'].'%' }}</b></div><div class="qs-progress"><span style="width:{{ $row['coverage']??0 }}%"></span></div><small>{{ $row['reported']+$row['exempt'] }} / {{ $row['expected'] }} covered <span>{{ $row['issues'] }} findings</span></small></a>@empty<p class="qs-detail p-3 mb-0">No approved plans match this scope.</p>@endforelse</div></section>
+            <section class="qs-guide"><span class="qs-eyebrow">FROM SIGNAL TO ACTION</span><h2>A focused review routine</h2><ol><li><strong>Fill reporting gaps</strong><p>Record explicit actuals, including zero. Complete N/A approval when appropriate.</p></li><li><strong>Verify exceptions</strong><p>Reconcile units, plan values and source evidence. High achievement can be valid.</p></li><li><strong>Complete approvals</strong><p>Use the report's current workflow and assigned reviewer to move it forward.</p></li></ol></section>
+        </aside>
+    </div>
+    <details class="qs-method"><summary><i class="fas fa-fingerprint mr-2"></i> Scan scope &amp; check definitions</summary><div><p>Uses the latest approved plan per department, approved assigned activities with a target, and independently reportable items. Calculated parents and reference activities are excluded. All calendar reporting weeks are checked once their submission deadline passes; monthly activities become due after month end. Daily activity checks use weekly summaries, not daily completeness.</p><p>Coverage = (recorded actuals + finally approved N/A activities) / due activity-periods. Final approval = finally approved activity-periods / due activity-periods. Weekly/shared status and monthly period aliases are respected. Exceptions flag uncapped achievement above 200% or positive actuals against a zero plan. These are review signals, not automatic data corrections or a guarantee of accuracy.</p><p class="mb-0">This scan is read-only. Open report links retain the department and period, and existing workflow permissions govern every correction. Refresh or apply filters to rescan current records.</p></div></details>
+</div>
 @endsection
+@push('styles')
+<style>
+.qs{--qs-ink:#15283e;--qs-muted:#67788c;--qs-line:#e3eaf1;color:var(--qs-ink);max-width:1680px;margin:0 auto 32px;font-size:14px}.qs-hero{background:linear-gradient(115deg,#10273e,#153f55 74%,#11636a);border-radius:18px;padding:32px 36px;display:flex;justify-content:space-between;gap:24px;color:#fff;box-shadow:0 12px 28px #123b5014}.qs-eyebrow{font-size:10px;font-weight:800;letter-spacing:1.8px;color:#6d8596}.qs-hero .qs-eyebrow{color:#96ced2}.qs-hero h1{font-size:34px;font-weight:750;letter-spacing:-1.2px;margin:10px 0}.qs-dot{display:inline-block;width:9px;height:9px;background:#46d4bb;border-radius:50%;margin:0 0 4px 9px}.qs-hero p{color:#c0d3de;margin:0 0 20px}.qs-hero-meta{display:flex;gap:10px 20px;flex-wrap:wrap;font-size:12px;color:#afc7d5}.qs-hero-action{display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:12px;flex-shrink:0}.qs-live{color:#a8e9d7;font-size:11px}.qs-live span{display:inline-block;background:#59d9b1;width:6px;height:6px;border-radius:50%;margin-right:5px}.qs-export{border:1px solid #ffffff55;border-radius:8px;color:white;padding:10px 18px;background:#ffffff0c}.qs-export:hover{color:white;background:#ffffff22}.qs-hero small{color:#a4c3ce;font-size:10px}.qs-filters{background:#fff;border:1px solid var(--qs-line);border-radius:12px;padding:18px;margin:20px 0;display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}.qs-filters>div{flex:1;min-width:125px}.qs-filters>.qs-dept,.qs-filters>.qs-search{flex:1.5;min-width:170px}.qs-filters label{display:block;font-size:10px;letter-spacing:.6px;text-transform:uppercase;color:var(--qs-muted);margin-bottom:6px}.qs-filters .form-control{font-size:12px;border-color:var(--qs-line);border-radius:7px;height:38px}.qs-apply{background:#153f55;color:white;height:38px;font-size:12px}.qs-apply:hover{color:#fff;background:#0e6970}.qs-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}.qs-metric{background:#fff;border:1px solid var(--qs-line);border-radius:12px;padding:22px;position:relative}.qs-metric-icon{position:absolute;right:18px;top:18px;background:#eaf2fc;color:#417dc2;border-radius:9px;width:32px;height:32px;display:grid;place-items:center}.qs-metric h2{font-size:12px;font-weight:600;color:var(--qs-muted);padding-right:32px;margin:0 0 18px}.qs-metric>strong{font-size:32px;letter-spacing:-1px;font-weight:750}.qs-metric p{color:var(--qs-muted);font-size:11px;margin:5px 0 13px}.qs-metric>a{font-size:11px;font-weight:700;color:#176877}.qs-progress{height:5px;background:#edf2f6;border-radius:20px;overflow:hidden}.qs-progress>span{height:100%;display:block;background:#527fba;border-radius:20px}.qs-teal{background:#e4f5f0;color:#19846d}.qs-progress.qs-teal>span{background:#248f7b}.qs-red{background:#fceced;color:#c74c59}.qs-amber{background:#fcf2de;color:#a5751b}.qs-scope-note{font-size:11px;color:var(--qs-muted);margin:14px 2px 22px}.qs-workspace{display:grid;grid-template-columns:minmax(0,2.3fr) minmax(270px,1fr);gap:20px;align-items:start}.qs-panel{background:#fff;border:1px solid var(--qs-line);border-radius:12px;overflow:hidden;margin-bottom:20px}.qs-panel-header{padding:20px 22px;display:flex;align-items:center;justify-content:space-between;gap:14px}.qs-panel h2,.qs-guide h2{font-size:18px;font-weight:700;letter-spacing:-.4px;margin:6px 0 0}.qs-count{font-size:11px;vertical-align:middle;padding:3px 8px;border-radius:20px;background:#edf2f6;margin-left:5px;letter-spacing:0}.qs-reset{font-size:11px;color:#527086}.qs-queue-meta{padding:10px 22px;background:#f7f9fb;border-top:1px solid var(--qs-line);border-bottom:1px solid var(--qs-line);font-size:10px;color:var(--qs-muted);display:flex;justify-content:space-between;gap:8px}.qs-finding{padding:18px 22px;border-bottom:1px solid #edf1f5;border-left:3px solid #aac0d7}.qs-finding-critical{border-left-color:#d26b73}.qs-finding-warning{border-left-color:#d5ac56}.qs-finding:last-child{border-bottom:0}.qs-finding-top{display:flex;align-items:center;gap:12px;margin-bottom:10px}.qs-priority{font-size:9px;letter-spacing:.6px;text-transform:uppercase;font-weight:800;padding:4px 8px;border-radius:5px}.qs-critical{background:#fcebed;color:#b73547}.qs-warning{background:#fff3d9;color:#926510}.qs-review{background:#edf2fa;color:#496d9a}.qs-finding-period{color:var(--qs-muted);font-size:10px}.qs-finding-body{display:flex;justify-content:space-between;gap:20px;align-items:center}.qs-finding h3{font-size:14px;font-weight:700;margin:0 0 7px}.qs-activity{font-size:12px;margin:0 0 5px;color:#324b61}.qs-activity strong{margin-right:6px}.qs-detail{font-size:11px;color:var(--qs-muted);line-height:1.7;margin-bottom:8px}.qs-department{font-size:10px;color:#60748a}.qs-open{font-size:11px;font-weight:700;color:#1b6679;white-space:nowrap;border:1px solid #d7e6ec;padding:8px 12px;border-radius:7px}.qs-open:hover{background:#eff8fa;color:#155365}.qs-department-list{max-height:440px;overflow:auto}.qs-department-row{display:block;padding:16px 22px;border-top:1px solid #edf1f5;color:var(--qs-ink)}.qs-department-row:hover{background:#f7fafc;text-decoration:none}.qs-department-row>div:first-child{display:flex;justify-content:space-between;gap:10px;font-size:12px;margin-bottom:10px}.qs-department-row b{color:#297a81;white-space:nowrap}.qs-department-row small{display:flex;justify-content:space-between;color:var(--qs-muted);font-size:10px;margin-top:7px}.qs-guide{background:#eaf1f5;border:1px solid #dce6ee;border-radius:12px;padding:24px}.qs-guide ol{padding-left:18px;margin:20px 0 0}.qs-guide li{padding-left:7px;margin-bottom:15px;color:#3f6079}.qs-guide li:last-child{margin-bottom:0}.qs-guide strong{font-size:12px}.qs-guide p{font-size:11px;line-height:1.65;color:#61778a;margin:4px 0 0}.qs-empty{text-align:center;padding:55px 28px}.qs-empty>div{width:48px;height:48px;background:#edf5f6;color:#2d8a88;border-radius:50%;display:grid;place-items:center;margin:0 auto 16px}.qs-empty h3{font-size:17px}.qs-empty p{max-width:430px;margin:10px auto 0;font-size:12px;line-height:1.8;color:var(--qs-muted)}.qs-method{background:white;border:1px solid var(--qs-line);border-radius:10px;margin-top:2px}.qs-method summary{cursor:pointer;padding:17px 22px;font-size:12px;font-weight:600;color:#45627a}.qs-method>div{padding:0 22px 20px;font-size:12px;color:var(--qs-muted);line-height:1.8}.qs-pagination{padding:15px 22px}.qs-pagination .pagination{margin:0}.qs a:focus-visible,.qs summary:focus-visible{outline:3px solid #71b8c7;outline-offset:3px}
+@media(max-width:1200px){.qs-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.qs-workspace{grid-template-columns:minmax(0,1fr)}.qs-workspace>aside{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}}@media(max-width:650px){.qs-hero{padding:24px;flex-direction:column}.qs-hero h1{font-size:29px}.qs-hero-action{align-items:flex-start}.qs-metrics{grid-template-columns:1fr}.qs-workspace>aside{display:block}.qs-finding-body{align-items:flex-start;flex-direction:column;gap:12px}.qs-panel-header{align-items:flex-start;flex-direction:column}.qs-filters>div{min-width:100%}.qs-apply{width:100%}.qs-queue-meta{flex-wrap:wrap}}
+@media print{.qs-filters,.qs-export,.qs-open,.qs-reset{display:none}.qs-workspace{display:block}.qs-hero{background:#153f55!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+</style>
+@endpush

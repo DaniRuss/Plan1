@@ -207,12 +207,28 @@ class MonthlyAggregationController extends Controller
         $workflowState = $this->buildWorkflowState($periodEntries->first());
         $workflowActions = $this->availableWorkflowActions($user, $workflowState['key']);
         $canEditWorkflow = $this->canUserEditPeriod($user, $workflowState['key']);
+        $sharedSubmission = \App\Models\ReportingSubmission::where(['department_id'=>$plan->department_id,'year'=>$year,
+            'month'=>$month,'frequency'=>'monthly','week'=>0])->first();
+        $legacyEntries = app(\App\Services\SharedReporting::class)->metricQuery(
+            ['month'=>$month,'year'=>$year,'frequency'=>'monthly'],
+            $plan->items->filter(fn ($item) => $item->effectiveReportingFrequency() === 'monthly')->pluck('id')->all())->get();
+        $sharedWorkspace = (bool)$sharedSubmission || (\App\Models\ReportingTeam::where('department_id',$plan->department_id)->exists()
+            && !$legacyEntries->contains(fn ($entry) => !in_array($entry->workflow_status,[null,'','draft'],true) || $entry->status === 'approved'));
+        if ($sharedWorkspace) {
+            $canEditWorkflow = false;
+            $workflowActions = array_fill_keys(array_keys($workflowActions),false);
+            if ($sharedSubmission) $workflowState = array_replace($workflowState,[
+                'key'=>$sharedSubmission->status,'label'=>ucwords(str_replace('_',' ',$sharedSubmission->status)),
+                'note'=>$sharedSubmission->workflow_note,
+            ]);
+        }
+
 
         $attachments = \App\Models\PerformanceAttachment::with('uploader')->where([
             'department_id' => $deptId, 'year' => $year, 'month' => strtolower($month),
             'week_number' => null, 'frequency' => 'monthly',
         ])->latest()->get();
-        return view('monthly.report', compact('year', 'month', 'plan', 'objectives', 'planItems', 'monthColumn', 'closure', 'deptId', 'calculator', 'effectiveWeights', 'objectiveRollups', 'missingWeightItems', 'weekCount', 'completeness', 'workflowState', 'workflowActions', 'canEditWorkflow', 'canSelectDepartment', 'attachments'));
+        return view('monthly.report', compact('year', 'month', 'plan', 'objectives', 'planItems', 'monthColumn', 'closure', 'deptId', 'calculator', 'effectiveWeights', 'objectiveRollups', 'missingWeightItems', 'weekCount', 'completeness', 'workflowState', 'workflowActions', 'canEditWorkflow', 'canSelectDepartment', 'attachments', 'sharedSubmission', 'sharedWorkspace'));
     }
 
     /**
@@ -446,105 +462,82 @@ class MonthlyAggregationController extends Controller
      */
     public function entryStore(Request $request, $year, $month)
     {
-        $request->validate([
-            'attachments' => 'nullable|array|max:10',
-            'attachments.*' => 'file|max:10240|mimes:pdf,doc,docx,xls,xlsx,csv,jpg,jpeg,png',
-        ]);
         $month = strtolower($month);
-        $user = auth()->user();
-        $canSelectDepartment = $this->canSelectDepartment($user);
-        $deptId = $canSelectDepartment ? ($request->input('department_id') ?: $user->department_id) : $user->department_id;
+        validator(['year'=>$year,'month'=>$month], [
+            'year'=>'required|integer|min:1900|max:9999',
+            'month'=>'required|in:july,august,september,october,november,december,january,february,march,april,may,june',
+        ])->validate();
+        $validated = $request->validate([
+            'department_id'=>'nullable|integer|exists:departments,id',
+            'entries'=>'sometimes|array',
+            'entries.*'=>'array:actual_value,notes',
+            'entries.*.actual_value'=>'nullable|numeric|min:0|max:9999999999.99',
+            'entries.*.notes'=>'nullable|string|max:5000',
+            'remarks'=>'sometimes|array|max:100',
+            'remarks.*'=>'array:type,text',
+            'remarks.*.type'=>'nullable|in:achievement,challenge,measure,general',
+            'remarks.*.text'=>'nullable|string|max:5000',
+            'attachments'=>'nullable|array|max:10',
+            'attachments.*'=>'file|max:10240|mimes:pdf,doc,docx,xls,xlsx,csv,jpg,jpeg,png',
+        ]);
+        $user = $request->user();
+        $deptId = $this->canSelectDepartment($user)
+            ? ($validated['department_id'] ?? $user->department_id) : $user->department_id;
         $dept = Department::find($deptId);
-
-        if (!$dept || !$dept->hasReportingFrequency('monthly')) {
-            abort(403, 'Only monthly-reporting departments can submit monthly entries.');
-        }
-
-        $plan = Plan::where('year', $year)
-            ->where('department_id', $dept->id)
-            ->where('status', 'approved')
-            ->firstOrFail();
-
-        $entries = $request->input('entries', []);
-        $period = $year . '-' . $month;
-        $existingEntries = $this->periodEntriesQuery((int) $dept->id, (int) $year, $month)->get();
-        $currentWorkflowStatus = $existingEntries->first()->workflow_status ?? 'draft';
-
-        if (!$this->canUserEditPeriod($user, $currentWorkflowStatus)) {
-            return back()->with('error', 'This monthly period is currently locked for your role. Use the review workflow actions for the next step.');
-        }
-
-        $planItems = $this->accessiblePlanItemsQuery((int) $dept->id, (int) $year)->forReportingFrequency('monthly')
-            ->with(['strategicObjective.children'])
-            ->get();
-        $allowedItems = $planItems->keyBy('id');
-
-        foreach ($entries as $planItemId => $data) {
-            $item = $allowedItems->get((int) $planItemId);
-            if (!$item || ($item->strategicObjective->children->isNotEmpty()
-                && $item->strategicObjective->summary_type !== 'manual_override')) {
-                continue;
-            }
-            if (is_null($item->{strtolower($month) . '_target'})) {
-                continue;
-            }
-
-            \App\Models\PeriodicPerformance::updateOrCreate(
-                ['plan_item_id' => $planItemId, 'period' => $period],
-                [
-                    'actual_value' => $data['actual_value'] ?? null,
-                    'notes'        => $data['notes'] ?? null,
-                    'status'       => $this->legacyStatusForWorkflow($currentWorkflowStatus),
-                    'workflow_status' => $currentWorkflowStatus,
-                ]
-            );
-        }
-
-        $this->performParentRollups($planItems, $period, $currentWorkflowStatus);
-
-        // Save General Performance Remarks (Monthly)
-        if ($request->has('remarks')) {
-            \App\Models\PerformanceRemark::where([
-                'department_id' => $dept->id,
-                'year' => $year,
-                'month' => $month,
-                'week_number' => null,
-            ])->delete();
-
-            foreach ($request->remarks as $remarkData) {
-                if (!empty($remarkData['text'])) {
-                    \App\Models\PerformanceRemark::create([
-                        'department_id' => $dept->id,
-                        'year' => $year,
-                        'month' => $month,
-                        'week_number' => null,
-                        'remark_type' => $remarkData['type'] ?? 'general',
-                        'remark_text' => $remarkData['text'],
+        abort_unless($dept && $dept->hasReportingFrequency('monthly'),403,'Only monthly-reporting departments can submit monthly entries.');
+        $paths = [];
+        try {
+            DB::transaction(function () use ($request,$validated,$user,$dept,$year,$month,&$paths) {
+                $plan = Plan::where('year',$year)->where('department_id',$dept->id)->where('status','approved')
+                    ->lockForUpdate()->firstOrFail();
+                abort_if(\App\Models\PeriodClosure::where(['department_id'=>$dept->id,'year'=>$year,'month'=>$month])->exists(),
+                    403,'This month is certified and locked.');
+                $period = $year.'-'.$month;
+                $existingEntries = $this->periodEntriesQuery((int)$dept->id,(int)$year,$month)->lockForUpdate()->get();
+                $currentWorkflowStatus = $existingEntries->first()?->workflow_status ?? 'draft';
+                abort_unless($this->canUserEditPeriod($user,$currentWorkflowStatus),403,
+                    'This monthly period is currently locked for your role. Use the review workflow actions for the next step.');
+                $accessibleItems = $this->accessiblePlanItemsQuery((int)$dept->id,(int)$year)->with('strategicObjective.children')->get()->keyBy('id');
+                $planItems = $accessibleItems->filter(fn ($item) => $item->effectiveReportingFrequency() === 'monthly');
+                $allowedItems = $planItems->keyBy('id');
+                foreach ($validated['entries'] ?? [] as $id=>$data) {
+                    $item = ctype_digit((string)$id) ? $accessibleItems->get((int)$id) : null;
+                    abort_unless($item,403,'A performance item is outside this authorized monthly plan.');
+                    if (!$allowedItems->has($item->id)) continue;
+                    if (($item->strategicObjective->children->isNotEmpty() && $item->strategicObjective->summary_type !== 'manual_override')
+                        || $item->{$month.'_target'} === null) continue;
+                    // Blank fields leave existing values intact; an explicit zero is saved.
+                    if (!isset($data['actual_value'])) continue;
+                    PeriodicPerformance::updateOrCreate(['plan_item_id'=>$id,'period'=>$period],[
+                        'actual_value'=>$data['actual_value'],'notes'=>$data['notes'] ?? null,
+                        'status'=>$this->legacyStatusForWorkflow($currentWorkflowStatus),'workflow_status'=>$currentWorkflowStatus,
                     ]);
                 }
-            }
+                $this->performParentRollups($planItems,$period,$currentWorkflowStatus);
+                if (array_key_exists('remarks',$validated)) {
+                    \App\Models\PerformanceRemark::where(['department_id'=>$dept->id,'year'=>$year,'month'=>$month,'week_number'=>null])->delete();
+                    foreach ($validated['remarks'] as $remark) {
+                        if (trim($remark['text'] ?? '') === '') continue;
+                        \App\Models\PerformanceRemark::create(['department_id'=>$dept->id,'year'=>$year,'month'=>$month,'week_number'=>null,
+                            'remark_type'=>$remark['type'] ?? 'general','remark_text'=>$remark['text']]);
+                    }
+                }
+                foreach ($request->file('attachments',[]) as $file) {
+                    $path = $file->store("performance_evidence/{$dept->id}/{$year}/monthly/{$month}",'local');
+                    if (!$path) throw new \RuntimeException('Evidence could not be stored.');
+                    $paths[] = $path;
+                    \App\Models\PerformanceAttachment::create(['department_id'=>$dept->id,'year'=>$year,'month'=>$month,'week_number'=>null,
+                        'frequency'=>'monthly','file_path'=>$path,'original_name'=>$file->getClientOriginalName(),
+                        'mime_type'=>$file->getMimeType(),'file_size'=>$file->getSize(),'uploaded_by'=>$user->id]);
+                }
+                \App\Models\AuditLog::log('monthly_entry_submitted',null,"Monthly entry for {$month} {$year} submitted by dept {$dept->id}");
+            });
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Storage::disk('local')->delete($paths);
+            throw $e;
         }
-
-        foreach ($request->file('attachments', []) as $file) {
-            $path = $file->store("performance_evidence/{$dept->id}/{$year}/monthly/{$month}", 'local');
-            \App\Models\PerformanceAttachment::create([
-                'department_id' => $dept->id,
-                'year' => $year,
-                'month' => $month,
-                'week_number' => null,
-                'frequency' => 'monthly',
-                'file_path' => $path,
-                'original_name' => $file->getClientOriginalName(),
-                'mime_type' => $file->getMimeType(),
-                'file_size' => $file->getSize(),
-                'uploaded_by' => $user->id,
-            ]);
-        }
-
-        \App\Models\AuditLog::log('monthly_entry_submitted', null, "Monthly entry for {$month} {$year} submitted by dept {$dept->id}");
-
         return redirect()->route('monthly.dashboard')
-            ->with('success', "Monthly report for " . ucfirst($month) . " {$year} submitted successfully.");
+            ->with('success','Monthly report for '.ucfirst($month)." {$year} saved successfully.");
     }
 
     private function performParentRollups($planItems, string $period, string $workflowStatus): void

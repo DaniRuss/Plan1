@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('page_header_hidden', '1')
 @section('title', 'Objective '.$objective->code)
 @push('styles')
 <style>

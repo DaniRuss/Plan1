@@ -11,6 +11,28 @@ class EdrEditorialWorkflowTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_all_plan_report_roles_can_create_and_edit_their_own_drafts(): void
+    {
+        [$department,$expert,$director,$head]=$this->users();
+        foreach ([$expert,$director,$head] as $actor) {
+            $actor->refresh();
+            $this->actingAs($actor)->get(route('reports.index'))->assertOk()->assertSee('Draft New Report');
+            $this->get(route('reports.create'))->assertOk();
+            $this->post(route('reports.store'),['department_id'=>$department->id,'year'=>2026,'reporting_period'=>'Annual','executive_summary'=>'Draft by '.$actor->name])->assertRedirect();
+            $report=EdrReport::where('submitted_by',$actor->id)->latest('id')->firstOrFail();
+            $this->assertSame('draft',$report->status);
+            $this->get(route('reports.show',$report))->assertOk();
+            $this->get(route('reports.edit',$report))->assertOk();
+            $this->put(route('reports.update',$report),['executive_summary'=>'Updated own draft'])->assertRedirect();
+            $this->assertSame('Updated own draft',$report->fresh()->executive_summary);
+            $this->get(route('reports.index'))->assertViewHas('reports',fn($reports)=>$reports->contains('id',$report->id));
+        }
+        $employee=User::factory()->create(['department_id'=>$department->id]);
+        $employee->roles()->attach(Role::where('name','employee')->value('id'));
+        $this->actingAs($employee)->get(route('reports.create'))->assertForbidden();
+        $this->post(route('reports.store'),['department_id'=>$department->id,'year'=>2026,'reporting_period'=>'Annual'])->assertForbidden();
+    }
+
     public function test_report_moves_expert_to_directorate_to_head_with_stage_editing(): void
     {
         [$department,$expert,$director,$head]=$this->users();

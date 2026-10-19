@@ -52,3 +52,10 @@ Shared reporting uses the existing in-app notification bell and notification inb
 - Reviewer reassignment notifies the assigned reviewer; reporting team changes retain their existing notifications.
 
 Notifications are sent after the database transaction commits. Recipients must be active, department recipients stay within the report department, duplicate recipients are removed, and the acting user does not receive their own notification.
+
+
+## Weekly and monthly correction escalation
+
+For weekly and monthly shared reports, the Plan & Report Expert chooses **Reviewed - No Correction Required** or **Request Correction Through Directorate**. Both send the report to the Plan & Report Directorate; correction requests require a comment of at least five characters. The Directorate forwards to the Plan & Report Chief (the existing `plan_report_head_office` role). Only that Chief/Head Office role can return the report to the Department Chief. Direct expert/directorate returns to the Department Chief are rejected on the server. Daily shared transitions are unchanged.
+
+The Department Chief corrects and resubmits to the Plan & Report Expert. The last department-approved publication remains visible until resubmission. Correction comments accompany notifications and are retained when the Directorate forwards without a replacement comment. Legacy weekly reporting already uses this escalation route.

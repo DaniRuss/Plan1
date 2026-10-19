@@ -42,6 +42,11 @@ class SharedReportingWorkspace
         if ($name === 'weekly.entry') return $next($request);
         $url = $submission ? route('shared-reporting.show',$submission) : route('shared-reporting.index',$key);
         if ($request->isMethod('GET')) return redirect($url);
+        // Old browser tabs may still contain legacy workflow forms without a version.
+        // Never replay their actions against the shared workflow.
+        if (!$request->expectsJson() && str_ends_with($name,'.workflow')) {
+            return redirect()->to($url,303)->with('error','No workflow action was applied. This period uses shared reporting. Review the current report and use its workflow controls.');
+        }
         abort(409,'This department uses shared reporting. Open '.$url.' to edit or submit with version checks.');
     }
 }

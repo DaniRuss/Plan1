@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('page_header_hidden', '1')
 
 @section('content')
     <div class="content-header">

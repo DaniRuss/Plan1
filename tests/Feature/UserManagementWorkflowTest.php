@@ -369,11 +369,12 @@ class UserManagementWorkflowTest extends TestCase
 
         $this->actingAs($chief)->get(route('weekly.entry', ['year'=>2026,'month'=>'july','week'=>1,'department_id'=>$department->id]))
             ->assertOk()->assertSee('Save Corrected Performance')->assertDontSee('This weekly period is read-only');
+        $savedPlan = (float) \App\Models\WeeklyPerformance::where('plan_item_id',$planItem->id)->value('planned_value');
         $this->actingAs($chief)->post(route('weekly.store'), [
             'year'=>2026,'month'=>'july','week'=>1,'department_id'=>$department->id,
-            'entries'=>[$objective->id=>['plan_value'=>20,'actual'=>19,'notes'=>'Corrected by chief']],
+            'entries'=>[$objective->id=>['plan_value'=>9999,'actual'=>19,'notes'=>'Corrected by chief']],
         ])->assertRedirect();
-        $this->assertDatabaseHas('weekly_performances',['plan_item_id'=>$planItem->id,'actual_value'=>19,'workflow_status'=>'returned_to_department_chief']);
+        $this->assertDatabaseHas('weekly_performances',['plan_item_id'=>$planItem->id,'actual_value'=>19,'planned_value'=>$savedPlan,'workflow_status'=>'returned_to_department_chief']);
         $this->actingAs($chief)->post(route('weekly.workflow',['year'=>2026,'month'=>'july','week'=>1]),[
             'department_id'=>$department->id,'action'=>'approve_by_chief','workflow_note'=>'Correction completed',
         ])->assertRedirect()->assertSessionHas('success','Corrected performance sent back to the Plan and Report Expert.');
@@ -806,8 +807,8 @@ class UserManagementWorkflowTest extends TestCase
                 $childTwoItem->id => ['monday' => 8, 'tuesday' => 2],
             ],
             'weekly_plans' => [
-                $childOneItem->id => 5,
-                $childTwoItem->id => 10,
+                $childOneItem->id => 9999,
+                $childTwoItem->id => 9999,
             ],
         ])->assertRedirect();
 

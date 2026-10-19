@@ -51,7 +51,7 @@ class EdrReportController extends Controller
 
     public function create()
     {
-        abort_unless(auth()->user()->isPlanReportDepartmentExpert() || auth()->user()->isSystemAdmin(), 403);
+        abort_unless(auth()->user()->canCreatePerformanceReport(), 403);
         $departments = Department::where('is_active', true)
             ->whereHas('plans', fn ($query) => $query->where('status', 'approved'))
             ->orderBy('name')->get();
@@ -70,7 +70,7 @@ class EdrReportController extends Controller
     public function preview(Request $request)
     {
         $user = auth()->user();
-        abort_unless($user->isSystemAdmin() || $user->isPlanReportDepartmentExpert() || $user->isPlanReportDirectorate() || $user->isPlanReportHeadOffice(), 403);
+        abort_unless($user->canCreatePerformanceReport(), 403);
         $validated = $request->validate([
             'department_id' => ['required', function ($attribute, $value, $fail) {
                 if ($value !== 'all' && !Department::whereKey($value)->exists()) $fail('The selected department is invalid.');
@@ -93,7 +93,7 @@ class EdrReportController extends Controller
 
     public function store(Request $request)
     {
-        abort_unless(auth()->user()->isPlanReportDepartmentExpert() || auth()->user()->isSystemAdmin(), 403);
+        abort_unless(auth()->user()->canCreatePerformanceReport(), 403);
         $validated = $request->validate([
             'department_id' => [
                 'required',
@@ -231,6 +231,7 @@ class EdrReportController extends Controller
         $user = auth()->user();
         if ($user->isSystemAdmin()) return;
         abort_unless(
+            ($user->canCreatePerformanceReport() && (int)$report->submitted_by === (int)$user->id && $report->status === 'draft') ||
             ($user->isPlanReportDepartmentExpert() && $report->status === 'draft') ||
             ($user->isPlanReportDirectorate() && $report->status === 'submitted_to_plan_report_directorate') ||
             ($user->isPlanReportHeadOffice() && $report->status === 'submitted_to_plan_report_head'), 403
@@ -251,12 +252,14 @@ class EdrReportController extends Controller
         }
 
         if ($user->isPlanReportDirectorate()) {
-            $query->whereIn('status', ['submitted_to_plan_report_directorate', 'submitted_to_plan_report_head', 'approved']);
+            $query->where(fn ($q) => $q->whereIn('status', ['submitted_to_plan_report_directorate', 'submitted_to_plan_report_head', 'approved'])
+                ->orWhere(fn ($own) => $own->where('status','draft')->where('submitted_by',$user->id)));
             return;
         }
 
         if ($user->isPlanReportHeadOffice()) {
-            $query->whereIn('status', ['submitted_to_plan_report_head', 'approved']);
+            $query->where(fn ($q) => $q->whereIn('status', ['submitted_to_plan_report_head', 'approved'])
+                ->orWhere(fn ($own) => $own->where('status','draft')->where('submitted_by',$user->id)));
             return;
         }
 

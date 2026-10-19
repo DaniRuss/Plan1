@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('page_header_hidden', '1')
 
 @section('title', 'Weekly Performance Entry')
 
@@ -208,7 +209,7 @@
                                                     <input type="number" step="any" @if(!is_null($maxAllowedPlan)) max="{{ $maxAllowedPlan }}" @endif name="entries[{{ $child->id }}][plan_value]"
                                                         class="form-control form-control-sm row-plan-input text-right font-weight-bold text-info border-0 rounded-0"
                                                         data-original-number="{{ !is_null($entry?->planned_value) ? (float)$entry->planned_value : $weeklyTarget }}" value="{{ \App\Support\NumberFormatter::format(!is_null($entry?->planned_value) ? (float)$entry->planned_value : $weeklyTarget,3,'.','') }}"
-                                                        {{ $repeatsMonthlyPlan || $isCalculatedParent ? 'readonly' : '' }}
+                                                        readonly
                                                         title="{{ $repeatsMonthlyPlan ? 'Monthly plan repeated in every week' : 'Monthly plan distributed across weeks' }}"
                                                         style="background-color: transparent;" placeholder="0">
                                                 </td>
@@ -324,7 +325,7 @@
                                                         <input type="number" step="any" @if(!is_null($subMaxAllowedPlan)) max="{{ $subMaxAllowedPlan }}" @endif name="entries[{{ $subChild->id }}][plan_value]"
                                                             class="form-control form-control-sm row-plan-input text-right font-weight-bold text-info border-0 rounded-0 p-1 bg-transparent"
                                                             data-original-number="{{ !is_null($subEntry?->planned_value) ? (float)$subEntry->planned_value : $subWeeklyTarget }}" value="{{ \App\Support\NumberFormatter::format(!is_null($subEntry?->planned_value) ? (float)$subEntry->planned_value : $subWeeklyTarget,3,'.','') }}"
-                                                            {{ $subRepeatsMonthlyPlan ? 'readonly' : '' }}
+                                                            readonly
                                                             title="{{ $subRepeatsMonthlyPlan ? 'Monthly plan repeated in every week' : 'Monthly plan distributed across weeks' }}" placeholder="0">
                                                     </td>
                                                     <td class="p-0">

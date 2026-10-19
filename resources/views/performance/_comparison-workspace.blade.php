@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('page_header_hidden', '1')
 @section('title','Performance Comparison')
 @section('breadcrumb')<li class="breadcrumb-item active">Performance Comparison</li>@endsection
 @section('content')

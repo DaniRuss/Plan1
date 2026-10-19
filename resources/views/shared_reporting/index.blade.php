@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('page_header_hidden', '1')
 @section('title','Shared Reporting')
 @section('content')
 <div class="container-fluid py-3"><h1 class="h3">Shared Department Reporting</h1><p class="text-muted">Experts enter data together. The coordinator submits completed sections to their assigned directorates, followed by chief and Plan &amp; Report approval.</p>

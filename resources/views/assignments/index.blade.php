@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('page_header_hidden', '1')
 @section('content')
 <style>
  .supplementary-objective{background:#f3e8ff!important;border-left:5px solid #7c3aed}

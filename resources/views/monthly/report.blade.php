@@ -1,8 +1,19 @@
 @extends('layouts.app')
+@section('page_header_hidden', '1')
 
 @section('title', 'Monthly Performance Report')
 
 @section('content')
+@if($sharedWorkspace ?? false)
+<div class="container-fluid pt-3">
+@if($sharedSubmission)
+@include('weekly._shared-review')
+@else
+<div class="alert alert-info">This period uses shared reporting. <a href="{{ route('shared-reporting.index',['department_id'=>$plan->department_id,'year'=>$year,'month'=>$month,'frequency'=>'monthly','week'=>0]) }}">Open Shared Reporting</a> to prepare and submit this report.</div>
+@endif
+</div>
+@endif
+
     @php
         $performanceScale = \App\Models\Setting::getPerformanceScale();
         $referenceBg = \App\Models\Setting::get('performance_reference_bg', '#cce5ff');

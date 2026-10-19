@@ -220,11 +220,9 @@ class DailyPerformanceController extends Controller
                     ? $planItem->strategicObjective->weeklyPlanFromMonthlyTarget($monthlyTarget, $numWeeks)
                     : ($numWeeks > 0 ? $monthlyTarget / $numWeeks : 0);
                 
-                $manualPlan = $validated['weekly_plans'][$itemId] ?? null;
-                $planValue = $planItem->strategicObjective?->weekly_plan_mode === 'repeat'
-                    ? $defaultWeeklyTarget
-                    : (!is_null($manualPlan) ? (float)$manualPlan : $defaultWeeklyTarget);
-                
+                $existingPlan = WeeklyPerformance::where(['plan_item_id'=>$itemId,'year'=>$year,'month'=>$month,'week_number'=>$week])->value('planned_value');
+                $planValue = $existingPlan !== null ? (float)$existingPlan : $defaultWeeklyTarget;
+
                 // Recalculate full weekly total from database to be safe
                 $fullWeeklyTotal = DailyPerformance::where('plan_item_id', $itemId)
                     ->where('year', $year)

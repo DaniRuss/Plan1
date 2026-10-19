@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('page_header_hidden', '1')
 @section('title','Reporting Team')
 @section('content')
 <div class="container-fluid py-3"><h1 class="h3">Reporting team: {{ $department->name }}</h1>

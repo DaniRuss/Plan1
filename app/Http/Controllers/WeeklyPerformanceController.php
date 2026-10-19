@@ -412,10 +412,10 @@ class WeeklyPerformanceController extends Controller
                     $actual = FidelityCalculator::scaleRevenueValue($rawActual, $planItem->strategicObjective->unit);
                 }
 
-                $planValue = (float) ($data['plan_value'] ?? 0);
-                if ($planItem->strategicObjective->weekly_plan_mode === 'repeat') {
-                    $planValue = (float) ($planItem->{$monthTargetColumn} ?? 0);
-                }
+                $existingPlan = WeeklyPerformance::where(['plan_item_id'=>$planItemId,'year'=>(int)$validated['year'],
+                    'month'=>$month,'week_number'=>(int)$validated['week']])->value('planned_value');
+                $planValue = $existingPlan !== null ? (float)$existingPlan
+                    : $planItem->strategicObjective->weeklyPlanFromMonthlyTarget((float)($planItem->{$monthTargetColumn} ?? 0),count(\App\Services\CalendarHelper::getMonthWeeks($month,(int)$validated['year'])));
                 $percentage = $planItem->strategicObjective->calculateWeeklyAchievement($actual, $planValue);
 
                 // Manual Override Logic (e.g. RoRo 100%)

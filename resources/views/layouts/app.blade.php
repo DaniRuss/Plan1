@@ -58,6 +58,31 @@
             background-color: #ffffff !important;
         }
 
+
+        /* One page heading, with a consistent workspace rhythm. */
+        .content-wrapper > .content { padding: 0 20px 24px; }
+        .content-wrapper > .content > .container-fluid { padding-top: 20px; }
+        .content-wrapper > .app-page-header + .content > .container-fluid { padding-top: 0; }
+        .app-page-header { padding: 26px 28px 8px; }
+        .app-page-header h1, .content .content-header h1 { font-size: 26px; font-weight: 650; letter-spacing: -.65px; line-height: 1.3; color: #203449 !important; }
+        .app-page-header .breadcrumb { background: transparent; font-size: 12px; margin: 4px 0 0; padding: 0; }
+        .workbench-header { padding: 4px 0 20px; }
+        .workbench-header > .container-fluid { padding: 0; }
+        .workbench-header .row { align-items: center; row-gap: 18px; }
+        .workbench-header p { margin: 8px 0 0; line-height: 1.7; }
+        .workbench-filters { display: flex !important; flex-wrap: wrap; justify-content: flex-end; align-items: flex-end; gap: 10px; text-align: left; }
+        .workbench-filter { display: flex; flex-direction: column; gap: 6px; min-width: 110px; }
+        .workbench-filter:first-child { flex: 1; max-width: 280px; }
+        .workbench-filter label { font-size: 10px; text-transform: uppercase; letter-spacing: .8px; color: #66798b; margin: 0 !important; }
+        .workbench-filter .form-control { height: 38px; width: 100%; margin: 0 !important; border-radius: 7px; border-color: #dce5ed; font-size: 12px; background-color: #fff; }
+        @media (max-width: 767px) {
+            .content-wrapper > .content { padding: 0 8px 20px; }
+            .app-page-header { padding: 20px 16px 8px; }
+            .app-page-header h1, .content .content-header h1 { font-size: 23px; }
+            .workbench-filters { justify-content: flex-start; }
+            .workbench-filter:first-child { max-width: none; }
+        }
+
         /* Dynamic Customizations */
         .main-sidebar {
             background-color: var(--sidebar-bg) !important;
@@ -414,7 +439,7 @@
                                 </li>
                             @endif
 
-                            @if($navUser->hasPermission('view_tasks'))
+                            <!-- @if($navUser->hasPermission('view_tasks'))
                             <li class="nav-item">
                                 <a href="{{ route('tasks.index') }}"
                                     class="nav-link {{ request()->routeIs('tasks.*') ? 'active' : '' }}">
@@ -422,7 +447,7 @@
                                     <p>Tasks</p>
                                 </a>
                             </li>
-                            @endif
+                            @endif -->
 
                             @if($navUser->isSystemAdmin() || $navUser->hasPermission('view_scorecard'))
                                 <li class="nav-item">
@@ -499,7 +524,7 @@
                             @endif
 
 
-                                <li class="nav-item">
+                                <!-- <li class="nav-item">
                                     <a href="{{ route('projects.index') }}"
                                         class="nav-link {{ request()->routeIs('projects.index') ? 'active' : '' }}">
                                         <i class="nav-icon fas fa-project-diagram"></i>
@@ -512,15 +537,15 @@
                                         <i class="nav-icon fas fa-chart-pie"></i>
                                         <p>Project Report</p>
                                     </a>
-                                </li>
-                                <li class="nav-item">
+                                </li> -->
+                                <!-- <li class="nav-item">
                                     <a href="{{ route('performance.index') }}"
                                         class="nav-link {{ request()->routeIs('performance.index', 'performance.edit', 'performance.report') ? 'active' : '' }}">
                                         <i class="nav-icon fas fa-chart-line"></i>
                                         <p>Performance</p>
                                     </a>
                                 </li>
-                            @endif
+                            @endif -->
 
                             @if($navUser->hasPermission('view_audit_logs'))
                                 <li class="nav-item">
@@ -532,7 +557,7 @@
                                 </li>
                             @endif
 
-                            @if($navUser->isSystemAdmin())
+                            <!-- @if($navUser->isSystemAdmin())
                                 <li class="nav-header">LOGISTICS &amp; IMPORTS</li>
                                 <li class="nav-item">
                                     <a href="{{ route('imports.dashboard') }}"
@@ -555,7 +580,7 @@
                                         <p>Train Journeys</p>
                                     </a>
                                 </li>
-                            @endif
+                            @endif -->
 
                             @if($navUser->hasPermission('manage_settings'))
                                 <li class="nav-item">
@@ -583,21 +608,26 @@
 
             <!-- Content Wrapper -->
             <div class="content-wrapper">
+                @unless(View::hasSection('page_header_hidden'))
                 <!-- Content Header -->
-                <div class="content-header">
+                <div class="content-header app-page-header">
                     <div class="container-fluid">
                         <div class="row mb-2">
-                            <div class="col-sm-6">
+                            <div class="col-md-9">
                                 <h1 class="m-0 text-dark">@yield('title')</h1>
                             </div>
-                            <div class="col-sm-6">
+                            <div class="col-md-3">
+                                @hasSection('breadcrumb')
                                 <ol class="breadcrumb float-sm-right">
                                     @yield('breadcrumb', '')
                                 </ol>
+                                @endif
                             </div>
                         </div>
                     </div>
                 </div>
+
+                @endunless
 
                 <!-- Main Content -->
                 <section class="content">

@@ -99,6 +99,12 @@ class User extends Authenticatable
         return $this->roles->pluck('name');
     }
 
+    public function canCreatePerformanceReport(): bool
+    {
+        return $this->is_active && ($this->isSystemAdmin() || $this->isPlanReportDepartmentExpert()
+            || $this->isPlanReportDirectorate() || $this->isPlanReportHeadOffice());
+    }
+
     // Helper Methods
     public function hasRole($roleName)
     {

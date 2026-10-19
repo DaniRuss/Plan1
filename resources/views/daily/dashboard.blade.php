@@ -1,9 +1,10 @@
 @extends('layouts.app')
+@section('page_header_hidden', '1')
 
 @section('title', 'Daily Performance Workbench')
 
 @section('content')
-    <div class="content-header">
+    <div class="content-header workbench-header">
         <div class="container-fluid">
             <div class="row mb-2">
                 <div class="col-sm-6">
@@ -17,23 +18,27 @@
                     </p>
                 </div>
                 <div class="col-sm-6 text-right">
-                    <form action="{{ route('daily.dashboard') }}" method="GET" class="form-inline d-inline-block">
+                    <form action="{{ route('daily.dashboard') }}" method="GET" class="workbench-filters">
                         @if($canSelectDepartment)
-                        <label class="mr-2 font-weight-bold">Department:</label>
-                        <select name="department_id" class="form-control form-control-sm mr-3" onchange="this.form.submit()">
+                        <div class="workbench-filter">
+                        <label for="workbench-department">Department</label>
+                        <select id="workbench-department" name="department_id" class="form-control form-control-sm mr-3" onchange="this.form.submit()">
                             <option value="">-- Select Department --</option>
                             @foreach($dailyDepartments as $d)
                                 <option value="{{ $d->id }}" {{ $deptId == $d->id ? 'selected' : '' }}>{{ $d->name }}</option>
                             @endforeach
                         </select>
+                        </div>
                         @endif
 
-                        <label class="mr-2 font-weight-bold">Fiscal Year:</label>
-                        <select name="year" class="form-control form-control-sm" onchange="this.form.submit()">
+                        <div class="workbench-filter">
+                        <label for="workbench-year">Fiscal year</label>
+                        <select id="workbench-year" name="year" class="form-control form-control-sm" onchange="this.form.submit()">
                             @foreach($years as $y)
                                 <option value="{{ $y }}" {{ $year == $y ? 'selected' : '' }}>{{ $y }}</option>
                             @endforeach
                         </select>
+                        </div>
                     </form>
                 </div>
             </div>

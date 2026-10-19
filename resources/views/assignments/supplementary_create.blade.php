@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('page_header_hidden', '1')
 @section('content')
 <div class="content-header"><div class="container-fluid"><h1 class="m-0">Create Supplementary Sub-Objective</h1></div></div>
 <section class="content"><div class="container-fluid"><div class="card card-primary">

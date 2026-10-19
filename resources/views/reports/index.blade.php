@@ -17,7 +17,7 @@
             <a href="{{ route('projects.report') }}" class="btn btn-info shadow mr-2">
                 <i class="fas fa-project-diagram mr-1"></i> Project Report
             </a>
-            @if(auth()->user()->isPlanReportDepartmentExpert() || auth()->user()->isSystemAdmin())<a href="{{ route('reports.create') }}" class="btn btn-primary shadow"><i class="fas fa-plus-circle mr-1"></i> Draft New Report</a>@endif
+            @if(auth()->user()->canCreatePerformanceReport())<a href="{{ route('reports.create') }}" class="btn btn-primary shadow"><i class="fas fa-plus-circle mr-1"></i> Draft New Report</a>@endif
         </div>
     </div>
 
@@ -83,7 +83,7 @@
                                             title="View Details" data-toggle="tooltip">
                                             <i class="fas fa-eye"></i>
                                         </a>
-                                        @php($canEdit=(auth()->user()->isSystemAdmin())||(auth()->user()->isPlanReportDepartmentExpert()&&$report->status==='draft')||(auth()->user()->isPlanReportDirectorate()&&$report->status==='submitted_to_plan_report_directorate')||(auth()->user()->isPlanReportHeadOffice()&&$report->status==='submitted_to_plan_report_head'))
+                                        @php($canEdit=(auth()->user()->canCreatePerformanceReport() && (int)$report->submitted_by===auth()->id() && $report->status==='draft')||(auth()->user()->isSystemAdmin())||(auth()->user()->isPlanReportDepartmentExpert()&&$report->status==='draft')||(auth()->user()->isPlanReportDirectorate()&&$report->status==='submitted_to_plan_report_directorate')||(auth()->user()->isPlanReportHeadOffice()&&$report->status==='submitted_to_plan_report_head'))
                                         @if($canEdit)
                                             <a href="{{ route('reports.edit', $report) }}" class="btn btn-sm btn-outline-warning"
                                                 title="Edit Narrative" data-toggle="tooltip">
@@ -112,7 +112,7 @@
                                     </div>
                                     <h5 class="text-muted">No reports found.</h5>
                                     <p class="text-muted small">Start by drafting your first performance report.</p>
-                                    <a href="{{ route('reports.create') }}" class="btn btn-primary btn-sm mt-2">Create New Report</a>
+                                    @if(auth()->user()->canCreatePerformanceReport())<a href="{{ route('reports.create') }}" class="btn btn-primary btn-sm mt-2">Create New Report</a>@endif
                                 </td>
                             </tr>
                         @endforelse

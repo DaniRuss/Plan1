@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('page_header_hidden', '1')
 @section('content')
 <div class="content-header"><div class="container-fluid d-flex justify-content-between"><h1>Notifications</h1>@if(auth()->user()->unreadNotifications()->exists())<form method="POST" action="{{ route('notifications.markAllAsRead') }}">@csrf<button class="btn btn-outline-primary">Mark all as read</button></form>@endif</div></div>
 <section class="content"><div class="container-fluid"><div class="card"><div class="list-group list-group-flush">

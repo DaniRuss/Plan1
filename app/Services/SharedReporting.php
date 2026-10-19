@@ -204,11 +204,6 @@ class SharedReporting
         if ($field === 'metadata') $previous = array_intersect_key($previous,array_flip($template === 'machinery' ? ['qty','time','days'] : ['count','cycle','tone']));
         if (!$same($data[$field] ?? ($field === 'actual' ? null : []),$previous)) return true;
         if (array_key_exists('stations',$data) && !$same($data['stations'],$before['stations'])) return true;
-        if (array_key_exists('planned',$data) && $s->frequency !== 'monthly') {
-            $expected = $before['planned'] ?? $entry->planItem->strategicObjective->weeklyPlanFromMonthlyTarget(
-                (float)$entry->planItem->{$s->month.'_target'},count(CalendarHelper::getMonthWeeks($s->month,$s->year)));
-            if (!$same($data['planned'],$expected)) return true;
-        }
         return false;
     }
 
@@ -299,6 +294,8 @@ class SharedReporting
                     $rules = [
                         'approve_chief'=>[['submitted_to_chief','returned_to_department_chief'],'submitted_to_plan_report_department','chief'],
                         'return_directorates'=>[['submitted_to_chief','returned_to_department_chief'],'submitted_to_directorate','chief'],
+                        'mark_reviewed_no_correction'=>[['submitted_to_plan_report_department','returned_to_plan_report_department'],'submitted_to_plan_report_directorate','expert'],
+                        'request_correction_directorate'=>[['submitted_to_plan_report_department','returned_to_plan_report_department'],'submitted_to_plan_report_directorate','expert'],
                         'forward_plan_report'=>[['submitted_to_plan_report_department','returned_to_plan_report_department'],'submitted_to_plan_report_directorate','expert'],
                         'return_department'=>[['submitted_to_plan_report_department','returned_to_plan_report_department'],'returned_to_department_chief','expert'],
                         'return_department_directorate'=>[['submitted_to_plan_report_directorate','returned_to_plan_report_directorate'],'returned_to_department_chief','directorate'],
@@ -318,6 +315,15 @@ class SharedReporting
                     };
                     abort_unless($actor->isSystemAdmin() || $allowed,403);
                     $this->check(in_array($s->status,$states,true),'This report is not at the required review stage.');
+                    if (in_array($s->frequency,['weekly','monthly'],true)) {
+                        abort_if(in_array($action,['return_department','return_department_directorate'],true),403,
+                            'Weekly and monthly corrections must pass through the Plan and Report Directorate and Head Office before reaching the department chief.');
+                        if ($action === 'request_correction_directorate') $this->check(mb_strlen($note)>=5,'A correction comment of at least 5 characters is required.');
+                        if ($action === 'forward_head' && $note === '') $note = $s->workflow_note ?? '';
+                    } else {
+                        $this->check(!in_array($action,['mark_reviewed_no_correction','request_correction_directorate'],true),'This action is only available for weekly and monthly shared reports.');
+                    }
+
                     if (str_starts_with($action,'return_')) $this->check(mb_strlen($note)>=5,'A return reason is required.');
                     if ($action === 'return_directorates') {
                         $selected = $data['sections'] ?? [];
@@ -334,12 +340,13 @@ class SharedReporting
                 $this->check(!$s->entries()->whereNotIn('state',['ready','not_applicable'])->exists(),'Mark all activities ready before approving department results.');
 
             }
+            $data['note'] = $note;
             $s->workflow_note = $note;
             $s->version++; $s->save();
             $this->synchronize($s);
             $stamp = match ($action) {
                 'approve_chief','return_directorates'=>['chief_reviewed_by'=>$actor->id,'chief_reviewed_at'=>now()],
-                'forward_plan_report'=>['plan_report_reviewed_by'=>$actor->id,'plan_report_reviewed_at'=>now()],
+                'forward_plan_report','mark_reviewed_no_correction','request_correction_directorate'=>['plan_report_reviewed_by'=>$actor->id,'plan_report_reviewed_at'=>now()],
                 'approve_final','return_chief','return_directorate'=>['head_office_reviewed_by'=>$actor->id,'head_office_reviewed_at'=>now()],
                 default=>[],
             };
@@ -357,9 +364,7 @@ class SharedReporting
     private function synchronize(ReportingSubmission $s): void
     {
         foreach ($s->sections()->with('entries')->get() as $section) {
-            $state = $s->status === 'submitted_to_directorate'
-                ? match ($section->status) { 'draft'=>'draft','returned_to_expert'=>'returned_to_expert','reviewed'=>'submitted_to_chief',default=>'submitted_to_directorate' }
-                : $s->status;
+            $state = $this->effectiveMetricState($s, $section);
             $updates = ['workflow_status'=>$state,'status'=>$this->metricStatus($s, $state)];
             if ($s->submitted_at) $updates += ['submitted_by'=>$s->submitted_by,'submitted_at'=>$s->submitted_at];
             if ($section->status === 'reviewed') $updates += ['directorate_reviewed_by'=>$section->reviewer_id,'directorate_reviewed_at'=>$section->reviewed_at];
@@ -369,6 +374,18 @@ class SharedReporting
         // Computed rows follow the consolidated report, never a first leaf row.
         $derived = $this->derivedIds($s);
         $this->metricQuery($s->toArray(),$derived)->update(['workflow_status'=>$s->status,'status'=>$this->metricStatus($s, $s->status)]);
+    }
+
+    private function effectiveMetricState(ReportingSubmission $submission, ?ReportingReviewSection $section): string
+    {
+        return $submission->status === 'submitted_to_directorate'
+            ? match ($section?->status) {
+                'draft' => 'draft',
+                'returned_to_expert' => 'returned_to_expert',
+                'reviewed' => 'submitted_to_chief',
+                default => 'submitted_to_directorate',
+            }
+            : $submission->status;
     }
 
     private function metricStatus(ReportingSubmission $submission, string $state): string
@@ -405,7 +422,7 @@ class SharedReporting
             'return_directorates' => $reviewers($s->sections()->whereIn('id',$data['sections'] ?? [])->get()),
             'approve_chief' => $globalRole(User::ROLE_PLAN_REPORT_DEPARTMENT_EXPERT),
             'return_department','return_department_directorate','return_chief' => $departmentRoles([User::ROLE_DEPARTMENT_CHIEF]),
-            'forward_plan_report','return_directorate' => $globalRole(User::ROLE_PLAN_REPORT_DIRECTORATE),
+            'forward_plan_report','mark_reviewed_no_correction','request_correction_directorate','return_directorate' => $globalRole(User::ROLE_PLAN_REPORT_DIRECTORATE),
             'return_plan_report' => $globalRole(User::ROLE_PLAN_REPORT_DEPARTMENT_EXPERT),
             'forward_head' => $globalRole(User::ROLE_PLAN_REPORT_HEAD_OFFICE),
             'approve_final' => $experts->merge($coordinators)
@@ -421,6 +438,8 @@ class SharedReporting
             'review_section' => ['Reporting section reviewed',$s->status === 'submitted_to_chief' ? 'All sections are reviewed. Department chief approval is required.' : 'A directorate completed its section review.','success'],
             'return_directorates' => ['Shared report returned','The department chief requested corrections to your section.','warning'],
             'approve_chief' => ['Shared report approved by department','The department chief approved the report. Plan and Report review is required.','success'],
+            'mark_reviewed_no_correction' => ['Shared report reviewed without correction','The Plan and Report expert reviewed the report with no correction required. Directorate confirmation is required.','success'],
+            'request_correction_directorate' => ['Shared report correction requested','The Plan and Report expert requested correction through the Directorate. Forward the request to Head Office for contact with the department chief.','warning'],
             'forward_plan_report' => ['Shared report awaiting directorate','The Plan and Report expert forwarded the report for directorate review.','info'],
             'forward_head' => ['Shared report awaiting final approval','The Plan and Report directorate forwarded the report for final approval.','info'],
             'approve_final' => ['Shared report finally approved','The report received final Head Office approval.','success'],
@@ -437,11 +456,12 @@ class SharedReporting
     private function persistMetric(ReportingEntry $entry, User $user, float $actual, array $data): void
     {
         $s = $entry->submission; $item = $entry->planItem;
+        $state = $this->effectiveMetricState($s, $entry->section);
         if ($s->frequency === 'monthly') {
             $key = $s->year.'-'.$s->month;
             $records = $this->metricQuery($s->toArray(),[$item->id])->get();
             $record = $records->firstWhere('period',$key) ?? $records->first() ?? new PeriodicPerformance(['plan_item_id'=>$item->id]);
-            $record->fill(['period'=>$key,'actual_value'=>$actual,'notes'=>$data['notes'] ?? null,'workflow_status'=>'draft','status'=>$this->metricStatus($s, 'draft')])->save();
+            $record->fill(['period'=>$key,'actual_value'=>$actual,'notes'=>$data['notes'] ?? null,'workflow_status'=>$state,'status'=>$this->metricStatus($s, $state)])->save();
             // Old entry screens used both "july" and "2026-july". Preserve the
             // previous values in the entry audit and keep just one metric row.
             PeriodicPerformance::whereIn('id',$records->pluck('id'))->where('id','!=',$record->id)->delete();
@@ -449,12 +469,13 @@ class SharedReporting
         }
         $weeks = CalendarHelper::getMonthWeeks($s->month,(int)$s->year);
         $default = $item->strategicObjective->weeklyPlanFromMonthlyTarget((float)$item->{$s->month.'_target'},count($weeks));
-        $plan = $item->strategicObjective->weekly_plan_mode === 'repeat' ? $default : (float)($data['planned'] ?? $default);
+        $existingPlan = $this->metricQuery($s->toArray(),[$item->id])->value('planned_value');
+        $plan = $existingPlan !== null ? (float)$existingPlan : $default;
         $this->check($plan >= 0,'The planned value cannot be negative.');
         $key = ['plan_item_id'=>$item->id,'year'=>$s->year,'month'=>$s->month,'week_number'=>$s->week];
         $weekly = WeeklyPerformance::updateOrCreate($key,['planned_value'=>$plan,'actual_value'=>$actual,'percentage'=>$item->strategicObjective->calculateWeeklyAchievement($actual,$plan),
             'period_start'=>$weeks[$s->week]['start_full'],'period_end'=>$weeks[$s->week]['end_full'],'due_at'=>$weeks[$s->week]['due_at'],
-            'metadata'=>$data['metadata'] ?? [],'notes'=>$data['notes'] ?? null,'workflow_status'=>'draft','status'=>'draft','created_by'=>$user->id]);
+            'metadata'=>$data['metadata'] ?? [],'notes'=>$data['notes'] ?? null,'workflow_status'=>$state,'status'=>$this->metricStatus($s, $state),'created_by'=>$user->id]);
         if (isset($data['stations'])) {
             $weekly->stationData()->whereNotIn('station_name',array_keys($data['stations']))->delete();
             foreach ($data['stations'] as $name=>$value) $weekly->stationData()->updateOrCreate(['station_name'=>$name],['planned_value'=>0,'actual_value'=>$value]);

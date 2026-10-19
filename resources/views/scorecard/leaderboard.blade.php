@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('page_header_hidden', '1')
 @section('title', 'Department Performance Scorecard')
 @section('content')
 <div class="container-fluid py-3">

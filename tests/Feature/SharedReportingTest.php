@@ -63,6 +63,68 @@ class SharedReportingTest extends TestCase
         $this->actingAs($user)->post(route('shared-reporting.transition',$s),$extra+['version'=>$s->fresh()->version,'action'=>$action])->assertRedirect()->assertSessionHasNoErrors();
     }
 
+    private function returnForCorrection(ReportingSubmission $s): void
+    {
+        $expert=$this->user('plan_report_department_expert');
+        $note='Please reconcile the revised totals';
+        if (!in_array($s->frequency,['weekly','monthly'],true)) {
+            $this->action($s,$expert,'return_department',['note'=>$note]);
+            return;
+        }
+        $this->action($s,$expert,'request_correction_directorate',['note'=>$note]);
+        $this->action($s,$this->user('plan_report_directorate'),'forward_head');
+        $this->action($s,$this->user('plan_report_head_office'),'return_chief',['note'=>$note]);
+    }
+
+    public static function escalatedCorrectionFrequencies(): array
+    {
+        return [['weekly'],['monthly']];
+    }
+
+    #[\PHPUnit\Framework\Attributes\DataProvider('escalatedCorrectionFrequencies')]
+    public function test_corrections_reach_department_chief_only_through_head_office(string $frequency): void
+    {
+        $s=$this->report($frequency);
+        foreach($s->entries as $entry) $this->saveReady($entry,$this->coordinator,10);
+        $this->action($s,$this->coordinator,'submit');
+        foreach($s->sections()->get() as $section) $this->action($s,$section->reviewer,'review_section',['section_id'=>$section->id,'version'=>$section->version]);
+        $this->action($s,$this->chief,'approve_chief');
+        $expert=$this->user('plan_report_department_expert');
+        $directorate=$this->user('plan_report_directorate');
+        $head=$this->user('plan_report_head_office');
+        $this->actingAs($expert)->get(route('shared-reporting.show',$s))->assertOk()
+            ->assertSee('Request Correction Through Directorate')->assertSee('No Correction Required')
+            ->assertDontSee('name="action" value="return_department"',false);
+        \Illuminate\Support\Facades\Notification::fake();
+        $this->post(route('shared-reporting.transition',$s),['version'=>$s->fresh()->version,'action'=>'return_department','note'=>'Direct correction bypass'])->assertForbidden();
+        $this->post(route('shared-reporting.transition',$s),['version'=>$s->fresh()->version,'action'=>'request_correction_directorate'])->assertSessionHasErrors('report');
+        $this->assertSame('submitted_to_plan_report_department',$s->fresh()->status);
+        \Illuminate\Support\Facades\Notification::assertNothingSent();
+        $note='Reconcile supporting station totals';
+        $this->action($s,$expert,'request_correction_directorate',['note'=>$note]);
+        $this->assertSame('submitted_to_plan_report_directorate',$s->fresh()->status);
+        \Illuminate\Support\Facades\Notification::assertSentTo($directorate,\App\Notifications\WorkflowNotification::class,
+            fn($n)=>$n->toArray($directorate)['type']==='warning' && str_contains($n->toArray($directorate)['message'],$note));
+        \Illuminate\Support\Facades\Notification::assertNotSentTo($this->chief,\App\Notifications\WorkflowNotification::class);
+        $this->assertFalse($this->service->editable($this->chief,$s->entries()->first()));
+        $reviewUrl=$frequency==='monthly' ? route('monthly.report',[2026,'july','department_id'=>$this->department->id]) : route('weekly.report',[2026,'july',1,'department_id'=>$this->department->id]);
+        $this->actingAs($directorate)->get($reviewUrl)->assertOk()
+            ->assertSee('Forward to Plan &amp; Report Chief / Head Office',false)->assertDontSee('name="action" value="return_department_directorate"',false);
+        $this->post(route('shared-reporting.transition',$s),['version'=>$s->fresh()->version,'action'=>'return_department_directorate','note'=>$note])->assertForbidden();
+        $this->action($s,$directorate,'forward_head');
+        $this->assertSame($note,$s->fresh()->workflow_note);
+        \Illuminate\Support\Facades\Notification::assertSentTo($head,\App\Notifications\WorkflowNotification::class,
+            fn($n)=>str_contains($n->toArray($head)['message'],$note));
+        $this->post(route('shared-reporting.transition',$s),['version'=>$s->fresh()->version,'action'=>'return_chief','note'=>$note])->assertForbidden();
+        $this->action($s,$head,'return_chief',['note'=>$note]);
+        $this->assertSame('returned_to_department_chief',$s->fresh()->status);
+        $this->assertTrue($this->service->editable($this->chief,$s->entries()->first()));
+        \Illuminate\Support\Facades\Notification::assertSentTo($this->chief,\App\Notifications\WorkflowNotification::class);
+        $this->action($s,$this->chief,'approve_chief');
+        $this->action($s,$expert,'mark_reviewed_no_correction');
+        $this->assertSame('submitted_to_plan_report_directorate',$s->fresh()->status);
+    }
+
     public function test_workflow_notifications_target_next_reviewers_and_include_return_comments(): void
     {
         $s = $this->report();
@@ -106,6 +168,53 @@ class SharedReportingTest extends TestCase
         \Illuminate\Support\Facades\Notification::assertSentTo($replacement,\App\Notifications\WorkflowNotification::class,
             fn ($n) => $n->toArray($replacement)['title'] === 'Shared reporting reviewer assigned');
         \Illuminate\Support\Facades\Notification::assertNotSentTo($this->chief,\App\Notifications\WorkflowNotification::class);
+    }
+
+    public static function correctionFrequencies(): array
+    {
+        return [['monthly'],['weekly'],['daily']];
+    }
+
+    #[\PHPUnit\Framework\Attributes\DataProvider('correctionFrequencies')]
+    public function test_corrections_preserve_effective_metric_review_stage(string $frequency): void
+    {
+        $s = $this->report($frequency);
+        $save = function ($entry,$actor,$actual,$reason = null) use ($s,$frequency) {
+            $entry->refresh();
+            $data = ['version'=>$entry->version,'state'=>'ready','actual'=>$actual,'planned'=>25,'reason'=>$reason];
+            if ($frequency === 'daily') $data['days'] = array_fill_keys($this->service->days($s),$actual);
+            $this->actingAs($actor)->put(route('shared-reporting.save',$entry),$data)->assertRedirect()->assertSessionHasNoErrors();
+        };
+        foreach ($s->entries as $entry) $save($entry,$this->coordinator,10);
+        $this->action($s,$this->coordinator,'submit');
+        $entry = $s->entries()->first();
+        $save($entry,$entry->section->reviewer,12,'Reconciled directorate totals');
+        $table = $frequency === 'monthly' ? 'periodic_performances' : 'weekly_performances';
+        $this->assertDatabaseHas($table,['plan_item_id'=>$entry->plan_item_id,'workflow_status'=>'submitted_to_directorate','status'=>$frequency === 'monthly' ? 'pending' : 'submitted']);
+        foreach ($s->sections()->get() as $section) $this->action($s,$section->reviewer,'review_section',['section_id'=>$section->id,'version'=>$section->version]);
+        $save($entry,$this->chief,15,'Reconciled department totals');
+        $this->assertSame('submitted_to_chief',$s->fresh()->status);
+        $this->assertDatabaseHas($table,['plan_item_id'=>$entry->plan_item_id,'workflow_status'=>'submitted_to_chief','status'=>$frequency === 'monthly' ? 'pending' : 'submitted']);
+        $this->action($s,$this->chief,'approve_chief');
+        $this->returnForCorrection($s);
+        $save($entry,$this->chief,20,'Corrected returned department totals');
+        $this->assertDatabaseHas($table,['plan_item_id'=>$entry->plan_item_id,'workflow_status'=>'returned_to_department_chief','status'=>$frequency === 'monthly' ? 'rejected' : 'draft']);
+    }
+
+    public function test_report_uses_activity_table_and_ignores_submitted_plan_changes(): void
+    {
+        $s=$this->report(); $entry=$s->entries()->first();
+        $parent=StrategicObjective::create(['code'=>'1','description'=>'Cargo operations','department_id'=>$this->department->id,'status'=>'approved','unit'=>'Tons']);
+        $entry->planItem->strategicObjective->update(['parent_id'=>$parent->id]);
+        $default=$entry->planItem->strategicObjective->weeklyPlanFromMonthlyTarget(100,count(\App\Services\CalendarHelper::getMonthWeeks('july',2026)));
+        $this->actingAs($this->coordinator)->get(route('shared-reporting.show',$s))->assertOk()
+            ->assertSee('Shared reporting activities')->assertSee('Cargo operations')->assertSee('MONTH PLAN')->assertSee('W1 Perf.')
+            ->assertDontSee('name="entries['.$entry->id.'][planned]"',false);
+        $this->put(route('shared-reporting.save',$entry),['version'=>1,'state'=>'ready','actual'=>20,'planned'=>999])->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('weekly_performances',['plan_item_id'=>$entry->plan_item_id,'planned_value'=>$default]);
+        WeeklyPerformance::where('plan_item_id',$entry->plan_item_id)->update(['planned_value'=>17]);
+        $this->put(route('shared-reporting.save',$entry),['version'=>$entry->fresh()->version,'state'=>'ready','actual'=>21,'planned'=>999])->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('weekly_performances',['plan_item_id'=>$entry->plan_item_id,'planned_value'=>17]);
     }
 
     public function test_page_saves_all_states_and_values_in_one_request(): void
@@ -169,7 +278,7 @@ class SharedReportingTest extends TestCase
         $this->assertSame(['verified'=>1],$s->fresh()->department_snapshot[0]['metadata']);
         $this->get($url)->assertOk()->assertViewHas('entries',fn($rows)=>$rows->get($entry->plan_item_id)->metadata===['verified'=>1])->assertSee('Department approved')->assertViewHas('entries',fn($rows)=>(float)$rows->get($entry->plan_item_id)->actual_value===20.0);
         $this->get(route('weekly.report',[2026,'july',1,'department_id'=>$this->department->id]))->assertOk();
-        $this->action($s,$this->user('plan_report_department_expert'),'return_department',['note'=>'Please reconcile the revised totals']);
+        $this->returnForCorrection($s);
         $entry->refresh();
         $this->actingAs($this->chief)->put(route('shared-reporting.save',$entry),['version'=>$entry->version,'state'=>'ready','actual'=>30,'planned'=>25,'reason'=>'Corrected the returned total'])->assertRedirect()->assertSessionHasNoErrors();
         $this->get($url)->assertOk()->assertSee('Returned for correction')->assertViewHas('entries',fn($rows)=>(float)$rows->get($entry->plan_item_id)->actual_value===20.0);
@@ -196,7 +305,7 @@ class SharedReportingTest extends TestCase
         $this->saveReady($entry,$this->coordinator,55.5678);
         WeeklyPerformance::where('plan_item_id',$entry->plan_item_id)->update(['actual_value'=>55.5678,'planned_value'=>25]);
         $this->get(route('shared-reporting.show',$s))->assertOk()
-            ->assertSee('value="55.568"',false)->assertSee('value="25"',false)
+            ->assertSee('value="55.568"',false)->assertSee('25')
             ->assertDontSee('value="55.567800000000"',false)->assertDontSee('value="25.000000000000"',false)
             ->assertSee('data-original-number="55.567800000000"',false);
         $this->assertDatabaseHas('weekly_performances',['plan_item_id'=>$entry->plan_item_id,'actual_value'=>55.5678]);
@@ -323,6 +432,31 @@ class SharedReportingTest extends TestCase
         $section = $s->sections()->first();
         $this->action($s,$section->reviewer,'return_section',['section_id'=>$section->id,'version'=>$section->version,'note'=>'Please verify the source totals']);
         $this->assertDatabaseHas('periodic_performances',['plan_item_id'=>$section->entries()->first()->plan_item_id,'status'=>'rejected','workflow_status'=>'returned_to_expert']);
+    }
+
+    public function test_monthly_report_uses_shared_actions_and_stale_legacy_form_does_not_transition(): void
+    {
+        $s=$this->report('monthly');
+        foreach($s->entries as $entry) $this->saveReady($entry,$this->coordinator,30);
+        $this->action($s,$this->coordinator,'submit');
+        foreach($s->sections()->get() as $section) $this->action($s,$section->reviewer,'review_section',['section_id'=>$section->id,'version'=>$section->version]);
+        $this->action($s,$this->chief,'approve_chief');
+        $expert=$this->user('plan_report_department_expert');
+        $version=$s->fresh()->version;
+        $reportUrl=route('monthly.report',[2026,'july','department_id'=>$this->department->id]);
+        $this->actingAs($expert)->get($reportUrl)->assertOk()
+            ->assertViewHas('sharedSubmission',fn($value)=>$value->id===$s->id)
+            ->assertSee('action="'.route('shared-reporting.transition',$s).'"',false)
+            ->assertSee('name="version" value="'.$version.'"',false)
+            ->assertDontSee('action="'.route('monthly.workflow',[2026,'july']).'"',false);
+        $payload=['department_id'=>$this->department->id,'action'=>'mark_reviewed_no_correction'];
+        $this->post(route('monthly.workflow',[2026,'july']),$payload)->assertStatus(303)
+            ->assertRedirect(route('shared-reporting.show',$s))->assertSessionHas('error');
+        $this->assertSame($version,$s->fresh()->version);
+        $this->assertSame('submitted_to_plan_report_department',$s->fresh()->status);
+        $this->postJson(route('monthly.workflow',[2026,'july']),$payload)->assertStatus(409);
+        $this->action($s,$expert,'forward_plan_report');
+        $this->assertSame('submitted_to_plan_report_directorate',$s->fresh()->status);
     }
 
     public function test_monthly_submission_uses_existing_metrics_and_is_idempotent(): void

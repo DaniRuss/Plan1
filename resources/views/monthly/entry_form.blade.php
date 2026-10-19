@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('page_header_hidden', '1')
 
 @section('title', 'Monthly Report Entry — ' . ucfirst($month) . ' ' . $year)
 

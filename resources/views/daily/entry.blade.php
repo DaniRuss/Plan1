@@ -182,7 +182,7 @@
                                                        name="weekly_plans[{{ $item->id }}]" 
                                                        class="form-control form-control-sm text-center font-weight-bold row-plan-input" 
                                                        data-original-number="{{ $currentPlan }}" value="{{ \App\Support\NumberFormatter::format($currentPlan,3,'.','') }}"
-                                                       {{ ($repeatsMonthlyPlan || !$isPlanned) ? 'readonly' : '' }}
+                                                       readonly
                                                        title="{{ $repeatsMonthlyPlan ? 'Monthly plan repeated in every week' : 'Monthly plan distributed across weeks' }}"
                                                        placeholder="0.00">
                                             </td>
