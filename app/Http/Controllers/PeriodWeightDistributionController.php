@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\DB;
 
 class PeriodWeightDistributionController extends Controller
 {
-    public function edit(Request $request)
+    public function edit(Request $request, PeriodWeightNormalizer $resolver)
     {
         $this->authorizeRole();
         $year = (int) $request->get('year', Plan::where('status','approved')->max('year') ?? now()->year);
@@ -20,53 +20,62 @@ class PeriodWeightDistributionController extends Controller
         $plan = Plan::with(['department','items.strategicObjective.parent'])->where(['year'=>$year,'department_id'=>$departmentId,'status'=>'approved'])->latest('updated_at')->firstOrFail();
         $distribution = PeriodWeightDistribution::with('allocations')->firstOrNew(['department_id'=>$departmentId,'year'=>$year,'period'=>$period], ['mode'=>'manual','status'=>'draft']);
         $existing = $distribution->allocations->keyBy('plan_item_id');
-        $target = $period.'_target';
+        $planning = $resolver->planningForPeriod($plan->items, $period);
+        if ($distribution->status === 'approved') {
+            foreach ($plan->items as $item) $planning[$item->id] = $existing->get($item->id)?->effective_weight !== null;
+        }
         $groups = $plan->items
             ->filter(fn($item) => $item->strategicObjective
-                && $item->strategicObjective->parent_id
                 && !$item->strategicObjective->is_reference_only
                 && !$item->strategicObjective->exclude_from_overall_score)
-            ->groupBy(fn($item) => $item->strategicObjective->parent_id)
-            ->filter(function ($siblings) use ($target) {
-                $plannedCount = $siblings->filter(fn($item) => $item->getAttribute($target) !== null)->count();
+            ->groupBy(fn($item) => $item->strategicObjective->parent_id ?? 'root')
+            ->filter(function ($siblings) use ($planning) {
+                $plannedCount = $siblings->filter(fn($item) => $planning[$item->id] ?? false)->count();
                 return $plannedCount > 0 && $plannedCount < $siblings->count();
             });
         $departments = \App\Models\Department::whereHas('plans', fn($q)=>$q->where('year',$year)->where('status','approved'))->orderBy('name')->get();
         $years = Plan::where('status','approved')->distinct()->orderByDesc('year')->pluck('year');
-        return view('period_weights.edit', compact('year','period','plan','distribution','existing','groups','departments','years'));
+        return view('period_weights.edit', compact('year','period','plan','distribution','existing','groups','departments','years','planning'));
     }
 
     public function store(Request $request, PeriodWeightNormalizer $resolver)
     {
         abort_unless(auth()->user()->isPlanReportDepartmentExpert() || auth()->user()->isSystemAdmin(), 403);
-        $data = $request->validate(['department_id'=>'required|exists:departments,id','year'=>'required|integer','period'=>'required|in:'.implode(',',$this->periods()),'weights'=>'required|array','weights.*'=>'nullable|numeric|min:0','action'=>'required|in:save,submit']);
+        $data = $request->validate(['department_id'=>'required|exists:departments,id','year'=>'required|integer','period'=>'required|in:'.implode(',',$this->periods()),'additions'=>'required|array','additions.*'=>'nullable|numeric|min:0','action'=>'required|in:save,submit']);
         $plan = Plan::with(['items.strategicObjective'])->where(['department_id'=>$data['department_id'],'year'=>$data['year'],'status'=>'approved'])->latest('updated_at')->firstOrFail();
         $distribution = PeriodWeightDistribution::firstOrNew(['department_id'=>$data['department_id'],'year'=>$data['year'],'period'=>$data['period']], ['mode'=>'manual','status'=>'draft']);
-        abort_unless(!$distribution->exists || in_array($distribution->status,['draft','returned'],true) || auth()->user()->isSystemAdmin(), 422, 'This distribution is locked in review.');
+        abort_unless(!$distribution->exists || in_array($distribution->status,['draft','returned'],true), 422, 'This distribution is locked in review.');
 
-        $target = $data['period'].'_target';
+        $planning = $resolver->planningForPeriod($plan->items, $data['period']);
         $scorable = $plan->items->filter(fn($item)=>$item->strategicObjective && !$item->strategicObjective->is_reference_only && !$item->strategicObjective->exclude_from_overall_score);
-        $errors = [];
-        foreach ($scorable->groupBy(fn($item)=>$item->strategicObjective->parent_id ?? 'root') as $siblings) {
-            $planned = $siblings->filter(fn($item)=>$item->getAttribute($target) !== null);
-            if ($planned->isEmpty() || $planned->count() === $siblings->count() || $planned->count() === 1) continue;
-            $required = (float)$siblings->sum(fn($item)=>$resolver->baseWeight($item));
-            $assigned = (float)$planned->sum(fn($item)=>(float)($data['weights'][$item->id] ?? 0));
-            if (abs($required-$assigned) > 0.0001) $errors[] = "Group {$siblings->first()->strategicObjective->parent_id}: effective weights must total ".\App\Support\NumberFormatter::format($required,3)."; assigned ".\App\Support\NumberFormatter::format($assigned,3)."; remaining ".\App\Support\NumberFormatter::format($required-$assigned,3).'.';
+        $groups = $scorable->groupBy(fn($item)=>$item->strategicObjective->parent_id ?? 'root');
+        $errors = []; $effectiveWeights = []; $editableIds = [];
+        foreach ($groups as $key => $siblings) {
+            $planned = $siblings->filter(fn($item)=>$planning[$item->id] ?? false);
+            $total = (float)$siblings->sum(fn($item)=>$resolver->baseWeight($item));
+            $original = (float)$planned->sum(fn($item)=>$resolver->baseWeight($item));
+            $available = round(max(0, $total - $original), 10);
+            $manual = $planned->count() > 1 && $planned->count() < $siblings->count();
+            $assigned = 0;
+            foreach ($siblings as $item) {
+                if (!($planning[$item->id] ?? false)) { $effectiveWeights[$item->id] = null; continue; }
+                $extra = $manual ? (float)($data['additions'][$item->id] ?? 0) : ($planned->count() === 1 ? $available : 0);
+                if ($manual) $editableIds[] = $item->id;
+                if ($manual && $extra > $available + 0.0001) $errors[] = "Group {$key}: extra allocation exceeds the available weight.";
+                $assigned += $extra;
+                $effectiveWeights[$item->id] = $resolver->baseWeight($item) + $extra;
+            }
+            if ($manual && abs($available-$assigned) > 0.0001) $errors[] = "Group {$key}: distribute only ".\App\Support\NumberFormatter::format($available,3)." extra weight; assigned ".\App\Support\NumberFormatter::format($assigned,3)."; remaining ".\App\Support\NumberFormatter::format($available-$assigned,3).'.';
         }
-        if ($errors) return back()->withInput()->withErrors(['weights'=>implode(' ', $errors)]);
+        foreach ($data['additions'] as $id => $value) {
+            if (!in_array((int)$id, $editableIds, true) && (float)$value != 0) $errors[] = 'Extra weight can only be assigned to planned activities in a group requiring redistribution.';
+        }
+        if ($errors) return back()->withInput()->withErrors(['additions'=>implode(' ', $errors)]);
 
-        DB::transaction(function() use($distribution,$data,$scorable,$resolver,$target) {
+        DB::transaction(function() use($distribution,$data,$scorable,$resolver,$effectiveWeights) {
             $distribution->fill(['mode'=>'manual','status'=>$data['action']==='submit'?'submitted_to_directorate':'draft','assigned_by'=>auth()->id(),'assigned_at'=>now()])->save();
             foreach ($scorable as $item) {
-                $planned = $item->getAttribute($target) !== null;
-                $siblings = $scorable->filter(fn($candidate)=>($candidate->strategicObjective->parent_id ?? 'root') === ($item->strategicObjective->parent_id ?? 'root'));
-                $plannedSiblings = $siblings->filter(fn($candidate)=>$candidate->getAttribute($target) !== null);
-                $effective = null;
-                if ($planned && $plannedSiblings->count()===$siblings->count()) $effective=$resolver->baseWeight($item);
-                elseif ($planned && $plannedSiblings->count()===1) $effective=(float)$siblings->sum(fn($candidate)=>$resolver->baseWeight($candidate));
-                elseif ($planned) $effective=(float)($data['weights'][$item->id] ?? 0);
-                $distribution->allocations()->updateOrCreate(['plan_item_id'=>$item->id],['original_weight'=>$resolver->baseWeight($item),'effective_weight'=>$effective]);
+                $distribution->allocations()->updateOrCreate(['plan_item_id'=>$item->id],['original_weight'=>$resolver->baseWeight($item),'effective_weight'=>$effectiveWeights[$item->id]]);
             }
         });
         \App\Models\AuditLog::log('period_weights_saved', $distribution, "{$data['period']} {$data['year']} manual period weights {$data['action']}");

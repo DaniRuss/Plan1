@@ -54,8 +54,9 @@
                                             <div class="progress-bar bg-{{ $color }}" style="width: {{ $report->achievement }}%"></div>
                                         </div>
                                         <span class="badge badge-{{ $color }} shadow-sm px-2">{{ \App\Support\NumberFormatter::format($report->achievement) }}%</span>
+                                        @if(!$report->performance_complete)<small class="d-block text-muted">Provisional</small>@endif
                                     @else
-                                        <span class="text-muted small">N/A</span>
+                                        <span class="text-muted small">{{ $report->performance_state }}</span>
                                     @endif
                                 </td>
                                 <td>

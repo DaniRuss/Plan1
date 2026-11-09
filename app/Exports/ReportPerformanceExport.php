@@ -9,11 +9,12 @@ use Maatwebsite\Excel\Concerns\WithColumnWidths;
 use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
+use Maatwebsite\Excel\Concerns\WithStrictNullComparison;
 use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 
-class ReportPerformanceExport implements FromCollection, WithHeadings, WithMapping, WithEvents, WithColumnWidths
+class ReportPerformanceExport implements FromCollection, WithHeadings, WithMapping, WithEvents, WithColumnWidths, WithStrictNullComparison
 {
     private Collection $data;
 
@@ -37,12 +38,13 @@ class ReportPerformanceExport implements FromCollection, WithHeadings, WithMappi
 
     public function map($row): array
     {
-        $rawAchievement = (float) ($row['raw_achievement'] ?? $row['quarter_comp']);
+        $rawAchievement = $row['raw_achievement'] ?? $row['quarter_comp'];
         $scorecardAchievement = array_key_exists('scorecard_achievement', $row)
             ? $row['scorecard_achievement']
             : $row['quarter_comp'];
         $status = $row['performance_status']
             ?? app(EdrPerformanceCalculator::class)->performanceStatus($row['is_planned'] ? $rawAchievement : null);
+        $reported = $row['reported'] ?? $row['quarter_perf'] !== null;
 
         return [
             $row['code'],
@@ -50,16 +52,16 @@ class ReportPerformanceExport implements FromCollection, WithHeadings, WithMappi
             $row['is_planned'] ? (float) $row['weight'] : 'N/A',
             $row['measurement'],
             $row['has_children'] && $row['is_planned'] ? 'Roll-up' : ($row['is_planned'] ? (float) $row['quarter_plan'] : 'N/A'),
-            $row['has_children'] && $row['is_planned'] ? 'Roll-up' : ($row['is_planned'] ? (float) $row['quarter_perf'] : 'N/A'),
-            $row['is_planned'] ? $rawAchievement / 100 : 'N/A',
+            !$row['is_planned'] ? 'N/A' : (!$reported ? $status : ($row['has_children'] ? 'Roll-up' : (float) $row['quarter_perf'])),
+            !$row['is_planned'] ? 'N/A' : ($rawAchievement === null ? null : $rawAchievement / 100),
             $row['is_planned'] && !is_null($scorecardAchievement)
                 ? (float) $scorecardAchievement / 100
-                : 'Operational',
+                : (($row['complete'] ?? true) && $row['is_planned'] ? 'Operational' : null),
             $status,
             $row['performer'] ?: 'N/A',
-            $row['is_planned'] ? (float) $row['score_factor'] : 'N/A',
-            (float) $row['weighted_score'],
-            $row['has_children'] ? (float) $row['weighted_score'] : null,
+            !$row['is_planned'] ? 'N/A' : ($row['score_factor'] === null ? null : (float) $row['score_factor']),
+            $row['weighted_score'] === null ? null : (float) $row['weighted_score'],
+            $row['has_children'] && $row['weighted_score'] !== null ? (float) $row['weighted_score'] : null,
         ];
     }
 
@@ -80,13 +82,13 @@ class ReportPerformanceExport implements FromCollection, WithHeadings, WithMappi
 
                 $sheet->insertNewRowBefore($totalRow, 2);
                 $sheet->mergeCells("A{$totalRow}:K{$totalRow}");
-                $sheet->setCellValue("A{$totalRow}", 'TOTAL EDR ACHIEVEMENT');
+                $sheet->setCellValue("A{$totalRow}", 'TOTAL EDR ACHIEVEMENT'.($summary['complete'] ? '' : ' · '.$summary['status'].' · Coverage '.$summary['coverage'].'%'));
                 $sheet->setCellValue("L{$totalRow}", $summary['weighted_score']);
-                $sheet->setCellValue("M{$totalRow}", is_null($summary['achievement']) ? 'N/A' : $summary['achievement'] / 100);
+                $sheet->setCellValue("M{$totalRow}", is_null($summary['achievement']) ? $summary['status'] : $summary['achievement'] / 100);
                 $sheet->mergeCells("A{$levelRow}:K{$levelRow}");
                 $sheet->setCellValue("A{$levelRow}", 'PERFORMANCE LEVEL');
                 $sheet->mergeCells("L{$levelRow}:M{$levelRow}");
-                $sheet->setCellValue("L{$levelRow}", $summary['performance_level']['label']);
+                $sheet->setCellValue("L{$levelRow}", $summary['achievement'] === null ? $summary['status'] : $summary['performance_level']['label']);
 
                 $sheet->getStyle('A1:M1')->applyFromArray([
                     'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],

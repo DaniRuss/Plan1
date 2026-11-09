@@ -134,7 +134,7 @@ class EdrPlanController extends Controller
             ->latest('updated_at')
             ->latest('id')
             ->first();
-        $departmentNames = Department::whereIn('id', $plans->pluck('items')->flatten()->flatMap(fn ($item) => $item->performers ?? [])->unique())->pluck('name', 'id');
+        $departmentNames = Department::pluck('name', 'id');
         $preview = $request->boolean('preview');
         $view = $preview ? 'edr_plans.organization_plan_pdf' : 'edr_plans.organization_approved_plans_pdf';
         $pdf = Pdf::loadView($view, compact('plans', 'narrative', 'year', 'departmentNames'))
@@ -164,10 +164,7 @@ class EdrPlanController extends Controller
             ->latest('updated_at')
             ->latest('id')
             ->first();
-        $departmentNames = Department::whereIn(
-            'id',
-            $plans->pluck('items')->flatten()->flatMap(fn ($item) => $item->performers ?? [])->unique()
-        )->pluck('name', 'id');
+        $departmentNames = Department::pluck('name', 'id');
 
         AuditLog::log('downloaded organization EDR plan Word document', $narrative, "Downloaded organization plan narration for {$year} EFY");
 
@@ -194,8 +191,7 @@ class EdrPlanController extends Controller
 
     private function planPdf(Plan $plan, $items, string $filename, ?StrategicObjective $selected = null)
     {
-        $departmentNames = Department::whereIn('id', $items->flatMap(fn ($item) => $item->performers ?? [])->unique())
-            ->pluck('name', 'id');
+        $departmentNames = Department::pluck('name', 'id');
         $narrative = EdrPlanDocument::with('preparer')->where('year', $plan->year)->first();
         return Pdf::loadView('edr_plans.plan_pdf', [
             'plan' => $plan, 'items' => $items->sortBy(fn ($item) => $item->strategicObjective?->code),

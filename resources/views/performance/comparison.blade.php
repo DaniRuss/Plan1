@@ -1,1 +1,1 @@
-@include('performance._comparison-workspace')
+@include(($comparison['workspace'] ?? null) === 'departments' ? 'performance._department-comparison' : (($comparison['workspace'] ?? null) === 'paired' ? 'performance._paired-comparison' : (($comparison['method'] ?? null) === 'historical' || ($comparison['workspace'] ?? null) === 'historical' ? 'performance._historical-comparison' : 'performance._comparison-workspace')), ['c' => $comparison])

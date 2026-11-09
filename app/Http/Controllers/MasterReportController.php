@@ -22,6 +22,7 @@ class MasterReportController extends Controller
         private readonly EdrPerformanceCalculator $performanceCalculator,
         private readonly PerformanceLevel $performanceLevel,
         private readonly PeriodWeightNormalizer $weightNormalizer,
+        private readonly \App\Services\ReportPeriodEvidence $periodEvidence,
     ) {}
 
     /**
@@ -167,32 +168,22 @@ class MasterReportController extends Controller
             $performers[] = $item->plan->department->name;
 
             foreach ($months as $m) {
-                $targetCol = $m . '_target';
-                if (!is_null($item->$targetCol)) {
+                $evidence = $this->periodEvidence->forItem($item, $m);
+                if ($evidence['planned']) {
                     $monthlyData[$m]['planned'] = true;
-                    $monthlyData[$m]['target'] += (float) $item->$targetCol;
+                    $monthlyData[$m]['target'] += $evidence['target'];
                     $monthlyData[$m]['effective_weight'] += (float) ($periodWeights[$m][$item->id] ?? 0);
                 }
-                if ($this->hasOfficialPerformance($item, $m)) {
-                    $monthlyData[$m]['actual'] += $this->officialActualForPeriod($item, $m);
-                    $monthlyData[$m]['reported'] = true;
-                }
+                $monthlyData[$m] = $this->addEvidence($monthlyData[$m], $evidence);
             }
             foreach ($quarters as $q) {
-                $targetCol = $q . '_target';
-                if (!is_null($item->$targetCol)) {
+                $evidence = $this->periodEvidence->forItem($item, $q);
+                if ($evidence['planned']) {
                     $quarterlyData[$q]['planned'] = true;
-                    $quarterlyData[$q]['target'] += (float) $item->$targetCol;
+                    $quarterlyData[$q]['target'] += $evidence['target'];
                     $quarterlyData[$q]['effective_weight'] += (float) ($periodWeights[$q][$item->id] ?? 0);
                 }
-                $quarterReported = collect([
-                    'q1' => ['july', 'august', 'september'], 'q2' => ['october', 'november', 'december'],
-                    'q3' => ['january', 'february', 'march'], 'q4' => ['april', 'may', 'june'],
-                ][$q])->contains(fn ($month) => $this->hasOfficialPerformance($item, $month));
-                if ($quarterReported) {
-                    $quarterlyData[$q]['actual'] += $this->officialActualForPeriod($item, $q);
-                    $quarterlyData[$q]['reported'] = true;
-                }
+                $quarterlyData[$q] = $this->addEvidence($quarterlyData[$q], $evidence);
             }
         }
 
@@ -232,11 +223,24 @@ class MasterReportController extends Controller
     private function emptyPeriodCell(): array
     {
         return [
-            'target' => 0.0, 'actual' => 0.0, 'planned' => false, 'reported' => false,
+            'target' => 0.0, 'actual' => null, 'planned' => false, 'reported' => false,
             'effective_weight' => 0.0, 'raw_achievement' => null, 'scorecard_achievement' => null,
             'status' => 'Not Planned (N/A)', 'level' => $this->performanceLevel->for(null),
             'is_rollup' => false, 'coverage' => 0.0,
+            'complete' => false, 'pending' => false, 'expected' => 0, 'completed' => 0,
+            'score_weight' => 0.0,
         ];
+    }
+
+    private function addEvidence(array $cell, array $evidence): array
+    {
+        if (!$evidence['planned']) return $cell;
+        if ($evidence['actual'] !== null) $cell['actual'] = ($cell['actual'] ?? 0.0) + $evidence['actual'];
+        $cell['reported'] = $cell['reported'] || $evidence['reported'];
+        $cell['pending'] = $cell['pending'] || $evidence['pending'];
+        $cell['expected'] += $evidence['expected'];
+        $cell['completed'] += $evidence['completed'];
+        return $cell;
     }
 
     private function finalizePeriodCell(array $cell, StrategicObjective $objective): array
@@ -246,8 +250,15 @@ class MasterReportController extends Controller
         }
 
         if (!$cell['reported']) {
-            $cell['status'] = 'Not Reported';
+            $cell['status'] = $cell['pending'] ? 'Pending Approval' : 'Not Reported';
             $cell['level'] = $this->performanceLevel->for(null);
+            return $cell;
+        }
+
+        $cell['coverage'] = $cell['expected'] > 0 ? round($cell['completed'] / $cell['expected'] * 100, 4) : 0.0;
+        $cell['complete'] = $cell['expected'] > 0 && $cell['completed'] === $cell['expected'];
+        if (!$cell['complete']) {
+            $cell['status'] = 'Provisional';
             return $cell;
         }
 
@@ -261,6 +272,7 @@ class MasterReportController extends Controller
         $cell['status'] = $this->performanceCalculator->performanceStatus($raw);
         $cell['level'] = $this->performanceLevel->for($cell['scorecard_achievement']);
         $cell['coverage'] = 100.0;
+        $cell['score_weight'] = $cell['effective_weight'];
 
         return $cell;
     }
@@ -286,30 +298,36 @@ class MasterReportController extends Controller
                     }
 
                     $reported = $cells->filter(fn ($cell) => $cell['reported'] ?? false);
+                    $scored = $cells->filter(fn ($cell) => $cell['scorecard_achievement'] !== null);
                     $plannedWeight = (float) $cells->sum(fn ($cell) => max(0, (float) ($cell['effective_weight'] ?? 0)));
-                    $reportedWeight = (float) $reported->sum(fn ($cell) => max(0, (float) ($cell['effective_weight'] ?? 0)));
-                    $fallbackWeight = $reported->count() > 0 ? (float) $reported->count() : 0.0;
+                    $reportedWeight = (float) $scored->sum(fn ($cell) => max(0, (float) $cell['score_weight']));
+                    $fallbackWeight = (float) $scored->count();
                     $denominator = $reportedWeight > 0 ? $reportedWeight : $fallbackWeight;
-                    $raw = $denominator > 0 ? $reported->sum(function ($cell) use ($reportedWeight) {
-                        $weight = $reportedWeight > 0 ? max(0, (float) ($cell['effective_weight'] ?? 0)) : 1.0;
+                    $raw = $denominator > 0 ? $scored->sum(function ($cell) use ($reportedWeight) {
+                        $weight = $reportedWeight > 0 ? max(0, (float) $cell['score_weight']) : 1.0;
                         return ((float) ($cell['raw_achievement'] ?? 0)) * $weight;
                     }) / $denominator : null;
-                    $scorecard = $denominator > 0 ? $reported->sum(function ($cell) use ($reportedWeight) {
-                        $weight = $reportedWeight > 0 ? max(0, (float) ($cell['effective_weight'] ?? 0)) : 1.0;
+                    $scorecard = $denominator > 0 ? $scored->sum(function ($cell) use ($reportedWeight) {
+                        $weight = $reportedWeight > 0 ? max(0, (float) $cell['score_weight']) : 1.0;
                         return ((float) ($cell['scorecard_achievement'] ?? 0)) * $weight;
                     }) / $denominator : null;
-                    $coverage = $plannedWeight > 0
-                        ? ($reportedWeight / $plannedWeight) * 100
-                        : ($cells->count() > 0 ? ($reported->count() / $cells->count()) * 100 : 0);
+                    $expected = (int) $cells->sum('expected');
+                    $completed = (int) $cells->sum('completed');
+                    $coverage = $expected > 0 ? $completed / $expected * 100 : 0.0;
+                    $complete = $expected > 0 && $completed === $expected;
+                    $pending = $cells->contains('pending', true);
 
                     $row[$bucket][$period] = [
-                        'target' => 'Roll-up', 'actual' => 'Roll-up', 'planned' => true,
+                        'target' => 'Roll-up', 'actual' => $reported->isEmpty() ? null : 'Roll-up', 'planned' => true,
                         'reported' => $reported->isNotEmpty(), 'effective_weight' => $plannedWeight,
                         'raw_achievement' => is_null($raw) ? null : round($raw, 2),
                         'scorecard_achievement' => is_null($scorecard) ? null : round(min(100, $scorecard), 2),
-                        'status' => is_null($raw) ? 'Not Reported' : $this->performanceCalculator->performanceStatus($raw),
+                        'status' => $reported->isEmpty() ? ($pending ? 'Pending Approval' : 'Not Reported') : (!$complete ? 'Provisional' : $this->performanceCalculator->performanceStatus($raw)),
                         'level' => $this->performanceLevel->for($scorecard), 'is_rollup' => true,
-                        'coverage' => round(min(100, $coverage), 1),
+                        'coverage' => round(min(100, $coverage), 4),
+                        'complete' => $complete, 'pending' => $pending,
+                        'expected' => (int) $cells->sum('expected'), 'completed' => (int) $cells->sum('completed'),
+                        'score_weight' => $reportedWeight,
                     ];
                 }
             }
@@ -322,57 +340,6 @@ class MasterReportController extends Controller
         return array_map(fn ($row) => $calculated[(int) $row['id']], $grid);
     }
 
-    /** Official reports include only records that completed Head Office approval. */
-    private function officialActualForPeriod(PlanItem $item, string $period): float
-    {
-        $reportingType = $item->effectiveReportingFrequency();
-        if (in_array($reportingType, ['weekly', 'daily'], true)) {
-            return (float) $item->getActualValueForPeriod($period);
-        }
-
-        $quarterMonths = [
-            'q1' => ['july', 'august', 'september'], 'q2' => ['october', 'november', 'december'],
-            'q3' => ['january', 'february', 'march'], 'q4' => ['april', 'may', 'june'],
-        ];
-        $period = strtolower($period);
-        $approved = $item->performances->filter(fn ($entry) =>
-            in_array($entry->workflow_status, ['reviewed_no_correction_required', 'approved_by_head_office'], true)
-        );
-        $monthlyValue = function (string $month) use ($approved, $item): float {
-            $keys = [strtolower($month), strtolower(($item->plan->year ?? '') . '-' . $month)];
-            $entry = $approved->first(fn ($record) => in_array(strtolower((string) $record->period), $keys, true));
-            return (float) ($entry?->actual_value ?? 0);
-        };
-
-        if (isset($quarterMonths[$period])) {
-            if ($item->strategicObjective?->target_distribution === 'checkpoint') {
-                $lastPlannedMonth = collect($quarterMonths[$period])
-                    ->filter(fn ($month) => !is_null($item->{$month . '_target'}))->last();
-                return $lastPlannedMonth ? $monthlyValue($lastPlannedMonth) : 0.0;
-            }
-            return (float) collect($quarterMonths[$period])->sum($monthlyValue);
-        }
-        return $monthlyValue($period);
-    }
-
-    private function hasOfficialPerformance(PlanItem $item, string $month): bool
-    {
-        $month = strtolower($month);
-        $reportingType = $item->effectiveReportingFrequency();
-        if (in_array($reportingType, ['weekly', 'daily'], true)) {
-            return $item->weeklyPerformances->contains(fn ($entry) =>
-                strtolower((string) $entry->month) === $month
-                && in_array($entry->workflow_status, ['reviewed_no_correction_required', 'approved_by_head_office'], true)
-            );
-        }
-
-        $keys = [$month, strtolower(($item->plan->year ?? '') . '-' . $month)];
-        return $item->performances->contains(fn ($entry) =>
-            in_array($entry->workflow_status, ['reviewed_no_correction_required', 'approved_by_head_office'], true)
-            && in_array(strtolower((string) $entry->period), $keys, true)
-        );
-    }
-
     private function reportSummary(array $gridData): array
     {
         $dataRows = collect($gridData)->where('has_data', true);
@@ -382,8 +349,8 @@ class MasterReportController extends Controller
         foreach ($scoredRows as $row) {
             foreach ($row['months'] as $period) {
                 if ($period['planned'] ?? false) {
-                    $plannedCells++;
-                    if ($period['reported'] ?? false) $reportedCells++;
+                    $plannedCells += $period['expected'];
+                    $reportedCells += $period['completed'];
                 }
             }
         }

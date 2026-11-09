@@ -18,6 +18,7 @@ class SettingController extends Controller
     public function update(Request $request)
     {
         $request->validate([
+            'document_brand_color' => ['nullable','regex:/^#[0-9a-fA-F]{6}$/'],
             'performance_exceptional_min' => 'nullable|numeric|min:0|max:100',
             'performance_high_min' => 'nullable|numeric|min:0|max:100|lt:performance_exceptional_min',
             'performance_satisfactory_min' => 'nullable|numeric|min:0|max:100|lt:performance_high_min',

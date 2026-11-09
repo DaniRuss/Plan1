@@ -1,0 +1,128 @@
+[
+  {
+    "title": "Start Here - Complete Workflow for Beginners",
+    "short": "Start Here",
+    "file": "IPRPMS_00_Start_Here_Full_Workflow.pdf",
+    "pages": 37,
+    "screens": 24,
+    "role": "00_Start_Here",
+    "bytes": 2622882
+  },
+  {
+    "title": "Department Expert & Reporting Coordinators",
+    "short": "Department Expert",
+    "file": "IPRPMS_01_Department_Expert_and_Coordinators.pdf",
+    "pages": 31,
+    "screens": 22,
+    "role": "01_Department_Expert_and_Coordinators",
+    "bytes": 2367839
+  },
+  {
+    "title": "Department Directorate",
+    "short": "Department Directorate",
+    "file": "IPRPMS_02_Department_Directorate.pdf",
+    "pages": 22,
+    "screens": 13,
+    "role": "02_Department_Directorate",
+    "bytes": 1482824
+  },
+  {
+    "title": "Department Chief (Head)",
+    "short": "Department Chief",
+    "file": "IPRPMS_03_Department_Chief.pdf",
+    "pages": 28,
+    "screens": 18,
+    "role": "03_Department_Chief",
+    "bytes": 1965833
+  },
+  {
+    "title": "Plan & Report Expert",
+    "short": "Plan and Report Expert",
+    "file": "IPRPMS_04_Plan_and_Report_Expert.pdf",
+    "pages": 71,
+    "screens": 54,
+    "role": "04_Plan_and_Report_Expert",
+    "bytes": 5982088
+  },
+  {
+    "title": "Plan & Report Directorate",
+    "short": "Plan and Report Directorate",
+    "file": "IPRPMS_05_Plan_and_Report_Directorate.pdf",
+    "pages": 27,
+    "screens": 15,
+    "role": "05_Plan_and_Report_Directorate",
+    "bytes": 1748017
+  },
+  {
+    "title": "Plan & Report Chief (Head)",
+    "short": "Plan and Report Chief",
+    "file": "IPRPMS_06_Plan_and_Report_Chief.pdf",
+    "pages": 38,
+    "screens": 25,
+    "role": "06_Plan_and_Report_Chief",
+    "bytes": 2821354
+  },
+  {
+    "title": "System Administrator",
+    "short": "System Administrator",
+    "file": "IPRPMS_07_System_Administrator.pdf",
+    "pages": 44,
+    "screens": 32,
+    "role": "07_System_Administrator",
+    "bytes": 3418680
+  },
+  {
+    "title": "HR Manager",
+    "short": "HR Manager",
+    "file": "IPRPMS_08_HR_Manager.pdf",
+    "pages": 17,
+    "screens": 10,
+    "role": "08_HR_Manager",
+    "bytes": 1241069
+  },
+  {
+    "title": "Department Head",
+    "short": "Department Head",
+    "file": "IPRPMS_09_Department_Head.pdf",
+    "pages": 21,
+    "screens": 13,
+    "role": "09_Department_Head",
+    "bytes": 1424156
+  },
+  {
+    "title": "Supervisor",
+    "short": "Supervisor",
+    "file": "IPRPMS_10_Supervisor.pdf",
+    "pages": 16,
+    "screens": 9,
+    "role": "10_Supervisor",
+    "bytes": 1096338
+  },
+  {
+    "title": "Employee",
+    "short": "Employee",
+    "file": "IPRPMS_11_Employee.pdf",
+    "pages": 13,
+    "screens": 7,
+    "role": "11_Employee",
+    "bytes": 881764
+  },
+  {
+    "title": "Auditor",
+    "short": "Auditor",
+    "file": "IPRPMS_12_Auditor.pdf",
+    "pages": 17,
+    "screens": 9,
+    "role": "12_Auditor",
+    "bytes": 1103532
+  },
+  {
+    "title": "General Head Office - Viewing Role",
+    "short": "General Head Office",
+    "file": "IPRPMS_13_General_Head_Office.pdf",
+    "pages": 17,
+    "screens": 10,
+    "role": "13_General_Head_Office",
+    "bytes": 1216487
+  }
+]

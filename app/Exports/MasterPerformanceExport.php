@@ -6,10 +6,11 @@ use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Concerns\WithStyles;
+use Maatwebsite\Excel\Concerns\WithStrictNullComparison;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 
-class MasterPerformanceExport implements FromCollection, WithHeadings, WithStyles, ShouldAutoSize
+class MasterPerformanceExport implements FromCollection, WithHeadings, WithStyles, ShouldAutoSize, WithStrictNullComparison
 {
     protected $data;
     protected $year;
@@ -128,9 +129,13 @@ class MasterPerformanceExport implements FromCollection, WithHeadings, WithStyle
     private function periodDisplay(array $cell, float $originalWeight): string
     {
         if (!($cell['planned'] ?? false)) return 'N/A';
-        if (!($cell['reported'] ?? false)) return 'Not Reported';
+        if (!($cell['reported'] ?? false)) return $cell['status'] ?? 'Not Reported';
         $actual = ($cell['is_rollup'] ?? false) ? 'Roll-up' : \App\Support\NumberFormatter::format($cell['actual']);
-        $display = $actual . ' | Raw ' . \App\Support\NumberFormatter::format((float) $cell['raw_achievement'],3) . '% | Score ' . \App\Support\NumberFormatter::format((float) $cell['scorecard_achievement'],3) . '% | ' . $cell['status'];
+        $display = $actual;
+        if ($cell['scorecard_achievement'] !== null) {
+            $display .= ' | Raw ' . \App\Support\NumberFormatter::format($cell['raw_achievement'],3) . '% | Score ' . \App\Support\NumberFormatter::format($cell['scorecard_achievement'],3) . '%';
+        }
+        $display .= ' | ' . $cell['status'];
         if (!($cell['is_rollup'] ?? false) && abs((float) ($cell['effective_weight'] ?? 0) - $originalWeight) > 0.0001) {
             $display .= ' | Effective weight ' . \App\Support\NumberFormatter::format((float) $cell['effective_weight'],3);
         }

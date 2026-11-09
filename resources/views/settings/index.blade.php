@@ -152,7 +152,7 @@
                                             <img src="{{ asset('storage/' . \App\Models\Setting::get('site_logo')) }}"
                                                 style="width: 150px; height: 50px; object-fit: contain;" id="logo-preview">
                                         @else
-                                            <img src="{{ asset('vendor/adminlte/dist/img/AdminLTELogo.png') }}"
+                                            <img src="{{ asset('images/system-logo.png') }}"
                                                 style="max-height: 80px;" id="logo-preview">
                                         @endif
                                     </div>
@@ -162,6 +162,12 @@
                                     </label>
                                     <small class="text-muted d-block mt-1 text-center">Recommended: 150x50 pixels,
                                         Transparent PNG.</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="document_brand_color">Document Brand Color</label>
+                                    <input type="color" id="document_brand_color" name="document_brand_color" class="form-control color-picker" value="{{ \App\Models\Setting::get('document_brand_color', '#277967') }}">
+                                    <input type="hidden" name="group_document_brand_color" value="branding">
+                                    <small class="text-muted">Used for approved-plan PDF and Word headings, table headers and section highlights. The default matches the system logo.</small>
                                 </div>
                                 <div class="row mt-4">
                                     <div class="col-md-9">

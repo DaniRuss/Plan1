@@ -20,6 +20,33 @@ class StrategicObjectiveKpiTest extends TestCase
         Role::create(['name' => 'system_admin']);
     }
 
+    public function test_edit_saves_each_accumulation_mode_and_rejects_parent_cycles(): void
+    {
+        $admin=User::factory()->create(['is_active'=>true,'must_change_password'=>false]);
+        $admin->roles()->attach(Role::where('name','system_admin')->first());
+        $department=Department::create(['name'=>'Passenger','code'=>'PAX']);
+        $objective=StrategicObjective::create(['code'=>'3','description'=>'Passengers','weight'=>10,'unit'=>'PAX in 1,000','department_id'=>$department->id,'performers'=>[$department->id],'lead_department_id'=>$department->id,'target_year'=>2026,'status'=>'draft']);
+        foreach (['objectives.create','objectives.edit'] as $route) {
+            $response=$this->actingAs($admin)->get($route==='objectives.edit' ? route($route,$objective) : route($route))->assertOk();
+            $response->assertSee('data-objective-target-calculator',false);
+            $response->assertDontSee('src="'.asset('js/objective-targets.js'),false);
+            $this->assertStringContainsString("mode.addEventListener('change', calculate)",$response->getContent());
+        }
+        $payload=['code'=>'3','description'=>'Passengers','weight'=>10,'unit'=>'PAX in 1,000','performers'=>[$department->id],'lead_department_id'=>$department->id,'goal_direction'=>'increase','target_year'=>2026,'weekly_plan_mode'=>'repeat','july_target'=>42.5417,'august_target'=>42.5417,'september_target'=>42.5417,'q1_target'=>999];
+        foreach (['sum'=>127.6251,'checkpoint'=>42.5417,'manual'=>999] as $mode=>$expected) {
+            $this->actingAs($admin)->put(route('objectives.update',$objective),$payload+['target_distribution'=>$mode])->assertRedirect()->assertSessionHasNoErrors();
+            $this->assertSame($mode,$objective->fresh()->target_distribution);
+            $this->assertEqualsWithDelta($expected,(float)$objective->fresh()->q1_target,0.0001);
+            $this->assertSame('repeat',$objective->fresh()->weekly_plan_mode);
+            $this->assertNull($objective->fresh()->q2_target);
+        }
+        $child=StrategicObjective::create(['code'=>'3.1','description'=>'Child','weight'=>1,'unit'=>'Number','department_id'=>$department->id,'parent_id'=>$objective->id]);
+        $grandchild=StrategicObjective::create(['code'=>'3.1.1','description'=>'Grandchild','weight'=>1,'unit'=>'Number','department_id'=>$department->id,'parent_id'=>$child->id]);
+        $this->get(route('objectives.edit',$objective))->assertOk()->assertViewHas('objectives',fn($items)=>!$items->contains('id',$grandchild->id));
+        $this->put(route('objectives.update',$objective),$payload+['target_distribution'=>'sum','parent_id'=>$grandchild->id])->assertSessionHasErrors('parent_id');
+        $this->assertNull($objective->fresh()->parent_id);
+    }
+
     public function test_objective_index_uses_natural_hierarchical_code_order(): void
     {
         $admin = User::factory()->create();

@@ -40,7 +40,8 @@ class EdrPerformanceCalculator
                 return $calculated[$itemId];
             }
             if (isset($visiting[$itemId])) {
-                return ['score' => 0.0, 'raw_score' => 0.0, 'weight' => 0.0];
+                return ['score' => 0.0, 'raw_score' => 0.0, 'weight' => 0.0, 'planned_weight' => 0.0,
+                    'reported' => false, 'complete' => false, 'coverage' => 0.0, 'expected' => 0, 'completed' => 0, 'pending' => false];
             }
 
             $visiting[$itemId] = true;
@@ -52,17 +53,33 @@ class EdrPerformanceCalculator
                 $score = (float) $childResults->sum('score');
                 $rawScore = (float) $childResults->sum('raw_score');
                 $possibleWeight = (float) $childResults->sum('weight');
+                $plannedWeight = (float) $childResults->sum('planned_weight');
+                $reported = $childResults->contains('reported', true);
+                $expected = (int) $childResults->sum('expected');
+                $completed = (int) $childResults->sum('completed');
+                $complete = $expected > 0 && $completed === $expected;
+                $coverage = $expected > 0 ? $completed / $expected * 100 : 0.0;
+                $pending = $childResults->contains('pending', true);
             } else {
-                $possibleWeight = $row['is_planned'] ? max(0.0, (float) $row['weight']) : 0.0;
-                $rawFactor = $row['is_planned']
+                $plannedWeight = $row['is_planned'] ? max(0.0, (float) $row['weight']) : 0.0;
+                $reported = $row['is_planned'] && ($row['reported'] ?? true);
+                $complete = $reported && ($row['complete'] ?? true);
+                $possibleWeight = $complete ? $plannedWeight : 0.0;
+                $rawFactor = $complete
                     ? max(0.0, (float) ($row['raw_achievement'] ?? $row['quarter_comp']) / 100)
                     : 0.0;
                 $rawScore = $rawFactor * $possibleWeight;
                 $score = min(1.0, $rawFactor) * $possibleWeight;
+                $coverage = $row['coverage'] ?? ($complete ? 100.0 : 0.0);
+                $expected = $row['is_planned'] ? ($row['expected'] ?? 1) : 0;
+                $completed = $row['is_planned'] ? ($row['completed'] ?? ($complete ? 1 : 0)) : 0;
+                $pending = $row['pending'] ?? false;
             }
 
             unset($visiting[$itemId]);
-            return $calculated[$itemId] = ['score' => $score, 'raw_score' => $rawScore, 'weight' => $possibleWeight];
+            return $calculated[$itemId] = ['score' => $score, 'raw_score' => $rawScore, 'weight' => $possibleWeight,
+                'planned_weight' => $plannedWeight, 'reported' => $reported, 'complete' => $complete,
+                'coverage' => (float) $coverage, 'expected' => $expected, 'completed' => $completed, 'pending' => $pending];
         };
 
         $result = [];
@@ -79,23 +96,33 @@ class EdrPerformanceCalculator
             $row['_parent_item_id'] = $parentItemId;
             $row['has_children'] = !empty($children[$itemId]);
             if ($row['has_children']) {
-                $row['is_planned'] = $score['weight'] > 0;
+                $row['is_planned'] = $score['planned_weight'] > 0 || $score['expected'] > 0;
                 $rawAchievement = $score['weight'] > 0 ? ($score['raw_score'] / $score['weight']) * 100 : null;
                 $scorecardAchievement = $score['weight'] > 0 ? ($score['score'] / $score['weight']) * 100 : null;
                 $row['raw_achievement'] = is_null($rawAchievement) ? null : round($rawAchievement, 2);
                 $row['scorecard_achievement'] = is_null($scorecardAchievement) ? null : round($scorecardAchievement, 2);
-                $row['quarter_comp'] = $row['scorecard_achievement'] ?? 0;
+                $row['quarter_comp'] = $row['scorecard_achievement'];
                 $row['performance_status'] = $this->performanceStatus($rawAchievement);
             } elseif (!$row['is_planned']) {
                 $row['raw_achievement'] = null;
                 $row['scorecard_achievement'] = null;
                 $row['performance_status'] = $this->performanceStatus(null);
             }
-            $row['score_factor'] = $score['weight'] > 0 ? min(1, $score['score'] / $score['weight']) : 0;
-            $row['weighted_score'] = round($score['score'], 4);
+            foreach (['reported', 'complete', 'coverage', 'expected', 'completed', 'pending'] as $key) $row[$key] = $score[$key];
+            if ($row['is_planned'] && !$score['complete']) {
+                if (!$row['has_children']) {
+                    $row['raw_achievement'] = $row['scorecard_achievement'] = $row['quarter_comp'] = null;
+                }
+                $row['performance_status'] = $score['reported'] ? 'Provisional' : ($score['pending'] ? 'Pending Approval' : 'Not Reported');
+            }
+            $hasScore = $score['weight'] > 0 || ($row['is_planned'] && $score['complete']);
+            $row['score_factor'] = !$hasScore ? null : ($score['weight'] > 0 ? min(1, $score['score'] / $score['weight']) : 0.0);
+            $row['weighted_score'] = $hasScore ? round($score['score'], 4) : null;
             $row['score_weight'] = round($score['weight'], 4);
+            $row['planned_weight'] = round($score['planned_weight'], 4);
+            $levelAchievement = $row['scorecard_achievement'] ?? $row['quarter_comp'];
             $row['performance_level'] = $this->performanceLevel->for(
-                $row['is_planned'] ? (float) ($row['scorecard_achievement'] ?? $row['quarter_comp']) : null
+                $row['is_planned'] && $levelAchievement !== null ? (float) $levelAchievement : null
             );
             $result[] = $row;
         }
@@ -137,15 +164,27 @@ class EdrPerformanceCalculator
     {
         $collection = collect($rows);
         $rootRows = $collection->filter(fn ($row) => empty($row['_parent_item_id']));
-        $totalScore = (float) $rootRows->sum('weighted_score');
+        $hasScore = $rootRows->contains(fn ($row) => $row['weighted_score'] !== null);
+        $totalScore = $hasScore ? (float) $rootRows->sum('weighted_score') : null;
         $totalWeight = (float) $rootRows->sum('score_weight');
         $achievement = $totalWeight > 0 ? ($totalScore / $totalWeight) * 100 : null;
+        $plannedWeight = (float) $rootRows->sum(fn ($row) => $row['planned_weight'] ?? $row['score_weight']);
+        $expected = (int) $rootRows->sum('expected');
+        $completed = (int) $rootRows->sum('completed');
+        $coverage = $expected > 0 ? $completed / $expected * 100 : ($plannedWeight > 0 ? 100.0 : 0.0);
+        $complete = $expected > 0 ? $completed === $expected : $plannedWeight > 0 && $rootRows->every(fn ($row) => $row['complete'] ?? true);
+        $reported = $rootRows->contains(fn ($row) => $row['reported'] ?? $row['weighted_score'] !== null);
 
         return [
-            'weighted_score' => round($totalScore, 4),
+            'weighted_score' => $totalScore === null ? null : round($totalScore, 4),
             'total_weight' => round($totalWeight, 4),
             'achievement' => is_null($achievement) ? null : round($achievement, 2),
             'performance_level' => $this->performanceLevel->for($achievement),
+            'complete' => $complete,
+            'coverage' => round($coverage, 4),
+            'expected' => (int) $rootRows->sum('expected'),
+            'completed' => (int) $rootRows->sum('completed'),
+            'status' => $complete ? 'Complete' : ($reported ? 'Provisional' : ($rootRows->contains('pending', true) ? 'Pending Approval' : 'Not Reported')),
         ];
     }
 

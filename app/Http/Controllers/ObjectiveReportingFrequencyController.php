@@ -53,7 +53,7 @@ class ObjectiveReportingFrequencyController extends Controller
         AuditLog::log('strategic_objective_updated', $objective, [
             'action' => $action, 'reason' => $objective->frequency_change_reason,
             'stage' => $objective->status, 'revision' => $objective->revision_number,
-            'editor' => ['id' => $request->user()->id, 'name' => $request->user()->name, 'department_id' => $request->user()->department_id],
+            'editor' => app(\App\Services\ObjectiveRevisionHistory::class)->editorSnapshot($request->user()),
             'requested_by' => $objective->frequency_requested_by,
             'changes' => ['reporting_frequency' => ['before' => $old ?? 'inherit', 'after' => $new ?? 'inherit']],
         ]);

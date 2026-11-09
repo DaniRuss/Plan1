@@ -29,7 +29,17 @@ class ObjectivePublisher
         });
     }
 
-    private function publishObjective(StrategicObjective $objective, User $approver): void
+    /** Update published values without resetting existing assignments or performance. */
+    public function syncApprovedObjective(StrategicObjective $objective, User $editor): void
+    {
+        if ($objective->status !== 'approved') {
+            return;
+        }
+
+        $this->publishObjective($objective->fresh(), $editor, preservePlanWorkflow: true);
+    }
+
+    private function publishObjective(StrategicObjective $objective, User $approver, bool $preservePlanWorkflow = false): void
     {
         $year = filter_var($objective->target_year, FILTER_VALIDATE_INT);
         if (!$year) {
@@ -62,7 +72,7 @@ class ObjectivePublisher
                 ]
             );
 
-            if ($plan->status !== 'approved') {
+            if (!$preservePlanWorkflow && $plan->status !== 'approved') {
                 $plan->update([
                     'status' => 'approved', 'approved_by' => $approver->id, 'approved_at' => now(),
                 ]);

@@ -33,9 +33,14 @@ class ObjectivePerformerMatcher
         return ['ids' => array_values($matched), 'unmatched' => array_values(array_unique($unmatched))];
     }
 
-    private function matchPart(string $part, Collection $departments, array &$matched, array &$unmatched): void
+    private function matchPart(string $part, Collection $departments, array &$matched, array &$unmatched, array $trail = []): void
     {
         $key = $this->key($part);
+        if (in_array($key, $trail, true)) {
+            $unmatched[] = $part;
+            return;
+        }
+        $trail[] = $key;
         if ($key === 'alldepartments') {
             foreach ($departments as $candidate) {
                 if ($candidate->is_active ?? true) $matched[(int) $candidate->id] = (int) $candidate->id;
@@ -44,7 +49,7 @@ class ObjectivePerformerMatcher
         }
 
         if (isset(self::ALIASES[$key])) {
-            foreach (self::ALIASES[$key] as $name) $this->matchPart($name, $departments, $matched, $unmatched);
+            foreach (self::ALIASES[$key] as $name) $this->matchPart($name, $departments, $matched, $unmatched, $trail);
             return;
         }
 
@@ -59,7 +64,7 @@ class ObjectivePerformerMatcher
 
         $parts = preg_split('/\s+(?:and|&)\s+/iu', $part);
         if (count($parts) > 1) {
-            foreach ($parts as $piece) $this->matchPart(trim($piece), $departments, $matched, $unmatched);
+            foreach ($parts as $piece) $this->matchPart(trim($piece), $departments, $matched, $unmatched, $trail);
             return;
         }
 

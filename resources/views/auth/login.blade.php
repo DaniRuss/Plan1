@@ -420,21 +420,10 @@
         <!-- Left Pane -->
         <div class="brand-pane">
             <div class="logo-container">
-                <!-- EDR Style Abstract Train Logo -->
-                <svg width="150" height="60" viewBox="0 0 240 90" xmlns="http://www.w3.org/2000/svg">
-                    <!-- Outer swoop -->
-                    <path
-                        d="M10,40 C70,10 130,5 180,5 C215,5 235,20 235,45 C235,50 230,53 220,53 C200,53 190,30 160,30 C120,30 60,45 20,55 Z"
-                        fill="#ffffff" opacity="0.9" />
-                    <!-- Middle swoop -->
-                    <path
-                        d="M40,65 C90,40 140,30 180,30 C205,30 220,42 220,58 C220,62 215,64 205,64 C190,64 180,45 155,45 C120,45 75,58 50,70 Z"
-                        fill="#4ade80" />
-                    <!-- Inner swoop -->
-                    <path
-                        d="M80,85 C120,70 160,60 190,60 C205,60 215,68 215,78 C215,82 210,84 200,84 C190,84 180,72 165,72 C140,72 105,82 85,90 Z"
-                        fill="#10b981" />
-                </svg>
+                <img src="{{ \App\Models\Setting::get('site_logo') ? asset('storage/' . \App\Models\Setting::get('site_logo')) : asset('images/system-logo.png') }}"
+                    alt="{{ \App\Models\Setting::get('site_name', 'IPRPMS') }} logo"
+                    style="max-width:220px;max-height:90px;width:auto;height:auto;object-fit:contain;">
+
             </div>
 
             <h1 class="brand-title">

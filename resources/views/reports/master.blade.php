@@ -133,16 +133,7 @@
                                                     @endif
                                                 </td>
                                                 <td class="text-center px-1 small font-weight-bold {{ $cell['reported'] ? 'approved-actual' : 'text-muted unreported' }}">
-                                                    @if(!$cell['planned'])
-                                                        <span class="badge badge-secondary">N/A</span>
-                                                    @elseif(!$cell['reported'])
-                                                        <span class="badge badge-light border">Not Reported</span>
-                                                    @else
-                                                        <div class="text-primary">{{ $cell['is_rollup'] ? 'Roll-up' : \App\Support\NumberFormatter::format((float)$cell['actual'],3) }}</div>
-                                                        <div class="score-chip" style="background:{{ $cell['level']['hex'] }};color:{{ $cell['level']['textHex'] }}">{{ \App\Support\NumberFormatter::format($cell['scorecard_achievement'],3) }}%</div>
-                                                        @if($cell['raw_achievement'] > 100)<small class="d-block text-info">Raw {{ \App\Support\NumberFormatter::format($cell['raw_achievement'],3) }}%</small>@endif
-                                                        @if(($cell['coverage'] ?? 100) < 100)<small class="d-block text-warning">{{ \App\Support\NumberFormatter::format($cell['coverage'],3) }}% covered</small>@endif
-                                                    @endif
+                                                    @include('reports._master_actual')
                                                 </td>
                                             @endforeach
                                             @php($q = $group['quarter'])
@@ -154,14 +145,7 @@
                                                 @endif
                                             </td>
                                             <td class="text-center px-1 small font-weight-bold bg-info-light">
-                                                @if(!$cell['planned'])<span class="badge badge-secondary">N/A</span>
-                                                @elseif(!$cell['reported'])<span class="badge badge-light border">Not Reported</span>
-                                                @else
-                                                    <div class="text-info">{{ $cell['is_rollup'] ? 'Roll-up' : \App\Support\NumberFormatter::format((float)$cell['actual'],3) }}</div>
-                                                    <div class="score-chip" style="background:{{ $cell['level']['hex'] }};color:{{ $cell['level']['textHex'] }}">{{ \App\Support\NumberFormatter::format($cell['scorecard_achievement'],3) }}%</div>
-                                                    @if($cell['raw_achievement'] > 100)<small class="d-block text-info">Raw {{ \App\Support\NumberFormatter::format($cell['raw_achievement'],3) }}%</small>@endif
-                                                    @if(($cell['coverage'] ?? 100) < 100)<small class="d-block text-warning">{{ \App\Support\NumberFormatter::format($cell['coverage'],3) }}% covered</small>@endif
-                                                @endif
+                                                @include('reports._master_actual')
                                             </td>
                                         @endforeach
 

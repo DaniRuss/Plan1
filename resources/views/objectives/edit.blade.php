@@ -1,5 +1,6 @@
 @extends('layouts.app')
 @section('page_header_hidden', '1')
+@section('title', 'Edit Strategic Objective')
 
 @section('content')
     <div class="content-header">
@@ -30,6 +31,13 @@
                     @method('PUT')
 
                     <div class="card-body">
+                        @if($objective->status === 'approved')
+                            <div class="alert alert-info">
+                                <strong>Editing an approved objective.</strong> Saving keeps it approved and updates the published plan values without a new approval cycle.
+                                Changes to targets, units or weights can affect reports and comparisons. Existing performance entries are not cleared.
+                                @if($isPublishedApprovedObjective) The published performance year and existing performer departments must be retained. @endif
+                            </div>
+                        @endif
                         <div class="row">
                             <div class="col-md-3">
                                 <div class="form-group mb-4">
@@ -171,7 +179,7 @@
                                     <select name="lead_department_id" id="lead_department_id" class="form-control @error('lead_department_id') is-invalid @enderror" required>
                                         <option value="">-- Select accountable department --</option>
                                         @foreach($departments as $dept)
-                                            <option value="{{ $dept->id }}" {{ old('lead_department_id', $objective->lead_department_id) == $dept->id ? 'selected' : '' }}>{{ $dept->name }}</option>
+                                            <option value="{{ $dept->id }}" {{ old('lead_department_id', $objective->lead_department_id ?? $objective->department_id) == $dept->id ? 'selected' : '' }}>{{ $dept->name }}</option>
                                         @endforeach
                                     </select>
                                     <small class="text-muted">Automatically included as a performer. When additional performers are selected, this department supplies the one authoritative company result.</small>
@@ -183,13 +191,16 @@
                         <div class="row">
                             <div class="col-md-4"><div class="form-group">
                                 <label for="target_year" class="required">Performance Year</label>
-                                <select name="target_year" id="target_year" class="form-control @error('target_year') is-invalid @enderror" required>
+                                @if($isPublishedApprovedObjective)
+                                    <input type="hidden" name="target_year" value="{{ $objective->target_year }}">
+                                @endif
+                                <select name="target_year" id="target_year" class="form-control @error('target_year') is-invalid @enderror" required @disabled($isPublishedApprovedObjective)>
                                     <option value="">-- Select Year --</option>
                                     @foreach($years as $year)
                                         <option value="{{ $year }}" {{ (string) old('target_year', $objective->target_year) === (string) $year ? 'selected' : '' }}>{{ $year }} EFY</option>
                                     @endforeach
                                 </select>
-                                <small class="text-muted">Approval publishes this objective directly to reporting for this year.</small>
+                                <small class="text-muted">{{ $isPublishedApprovedObjective ? 'This year is fixed because departmental reporting records have already been published.' : 'Approval publishes this objective directly to reporting for this year.' }}</small>
                                 @error('target_year')<span class="invalid-feedback">{{ $message }}</span>@enderror
                             </div></div>
                         </div>
@@ -248,15 +259,16 @@
                         @if(
                             (auth()->user()->isPlanReportDirectorate() && $objective->status === 'submitted_to_plan_report_directorate')
                             || (auth()->user()->isPlanReportHeadOffice() && $objective->status === 'submitted')
+                            || ($objective->status === 'approved' && !auth()->user()->isSystemAdmin())
                         )
                             <div class="form-group">
-                                <label for="review_change_reason">Reason for reviewer changes <span class="text-danger">*</span></label>
+                                <label for="review_change_reason">{{ $objective->status === 'approved' ? 'Reason for approved objective changes' : 'Reason for reviewer changes' }} <span class="text-danger">*</span></label>
                                 <textarea id="review_change_reason" name="review_change_reason" rows="2"
                                     class="form-control @error('review_change_reason') is-invalid @enderror"
                                     required minlength="5" maxlength="2000"
                                     placeholder="Briefly explain what was corrected and why.">{{ old('review_change_reason') }}</textarea>
                                 @error('review_change_reason')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                                <small class="form-text text-muted">This explanation is saved in the permanent revision history and sent to the plan owner.</small>
+                                <small class="form-text text-muted">This explanation is saved in the permanent revision history and is available to the plan owner on the Details page.</small>
                             </div>
                         @endif
                         <button type="submit" class="btn btn-primary">Update Objective</button>
@@ -269,32 +281,11 @@
 @endsection
 
 @push('scripts')
+{{-- Render the current calculator with the form; avoid stale or blocked asset URLs. --}}
+<script data-objective-target-calculator>{!! file_get_contents(public_path('js/objective-targets.js')) !!}</script>
     <script>
         function handleUnitChange() {
             validateAnnualTarget();
-        }
-
-        function recalculateQuarterTargets() {
-            var mode = $('#target_distribution').val();
-            var groups = [
-                [['july','august','september'], 'q1_target'], [['october','november','december'], 'q2_target'],
-                [['january','february','march'], 'q3_target'], [['april','may','june'], 'q4_target']
-            ];
-            groups.forEach(function (group) {
-                var months = group[0];
-                var quarter = group[1];
-                var input = $('#' + quarter);
-                input.prop('readonly', mode !== 'manual').toggleClass('bg-light', mode !== 'manual');
-                if (mode === 'sum') {
-                    var total = 0;
-                    months.forEach(function (month) { total += parseFloat($('[name="' + month + '_target"]').val()) || 0; });
-                    input.val(total).siblings('.quarter-calculation-note').text('Sum of the three months');
-                } else if (mode === 'checkpoint') {
-                    input.val($('[name="' + months[2] + '_target"]').val()).siblings('.quarter-calculation-note').text('Copied from ' + months[2].charAt(0).toUpperCase() + months[2].slice(1));
-                } else {
-                    input.siblings('.quarter-calculation-note').text('Enter the quarter target manually');
-                }
-            });
         }
 
         function validateAnnualTarget() {
@@ -303,7 +294,7 @@
             let errorEl = $('#targetError');
             let inputEl = $('#annual_target');
 
-            if (unit === 'Percentage (%)' && target > 100) {
+            if (['Percentage (%)', '%'].includes(unit) && target > 100) {
                 errorEl.removeClass('d-none');
                 inputEl.addClass('is-invalid');
             } else {
@@ -328,7 +319,6 @@
             });
             syncLeadPerformer();
             validateAnnualTarget();
-            recalculateQuarterTargets();
 
             function updateCalculatedWeightState() {
                 var calculated = $('#is_calculated_weight').is(':checked');
@@ -365,6 +355,5 @@
                 });
             });
         });
-        $(document).on('input change', '.target-month, #target_distribution', recalculateQuarterTargets);
     </script>
 @endpush

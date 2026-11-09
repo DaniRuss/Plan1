@@ -10,6 +10,7 @@
             @if($rowObjective->is_reference_only) · Reference only @endif
         </small>
         @if($rowObjective->kpi_code)<span class="badge {{ $ownedKpi ? 'badge-kpi-owned' : 'badge-kpi-code' }} mt-1">{{ $ownedKpi ? 'Your KPI' : 'KPI' }}: {{ $rowObjective->kpi_code }}</span>@endif
+        @include('objectives.partials.edit-attribution', ['editedObjective' => $rowObjective])
     </td>
     <td>{{ $rowObjective->unit ?: 'Not set' }}</td>
     <td class="objective-number">{{ \App\Support\NumberFormatter::format((float) $rowObjective->weight,3) }}%</td>

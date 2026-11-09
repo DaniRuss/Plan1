@@ -249,6 +249,8 @@
 @endsection
 
 @push('scripts')
+{{-- Render the current calculator with the form; avoid stale or blocked asset URLs. --}}
+<script data-objective-target-calculator>{!! file_get_contents(public_path('js/objective-targets.js')) !!}</script>
 <script>
 $(document).ready(function() {
     function syncLeadPerformer() {
@@ -390,36 +392,10 @@ function updateWeightInfo() {
 
 function handleUnitChange() { validateAnnualTarget(); }
 
-function recalculateQuarterTargets() {
-    var mode = $('#target_distribution').val();
-    var groups = [
-        [['july','august','september'], 'q1_target'], [['october','november','december'], 'q2_target'],
-        [['january','february','march'], 'q3_target'], [['april','may','june'], 'q4_target']
-    ];
-    groups.forEach(function (group) {
-        var months = group[0];
-        var quarter = group[1];
-        var input = $('#' + quarter);
-        input.prop('readonly', mode !== 'manual').toggleClass('bg-light', mode !== 'manual');
-        if (mode === 'sum') {
-            var total = 0;
-            months.forEach(function (month) { total += parseFloat($('[name="' + month + '_target"]').val()) || 0; });
-            input.val(total).siblings('.quarter-calculation-note').text('Sum of the three months');
-        } else if (mode === 'checkpoint') {
-            input.val($('[name="' + months[2] + '_target"]').val()).siblings('.quarter-calculation-note').text('Copied from ' + months[2].charAt(0).toUpperCase() + months[2].slice(1));
-        } else {
-            input.siblings('.quarter-calculation-note').text('Enter the quarter target manually');
-        }
-    });
-}
-
-$(document).on('input change', '.target-month, #target_distribution', recalculateQuarterTargets);
-$(document).ready(recalculateQuarterTargets);
-
 function validateAnnualTarget() {
     var unit = $('#unit').val();
     var target = parseFloat($('#annual_target').val());
-    if (unit === 'Percentage (%)' && target > 100) {
+    if (['Percentage (%)', '%'].includes(unit) && target > 100) {
         $('#targetError').removeClass('d-none');
         $('#annual_target').addClass('is-invalid');
     } else {

@@ -318,8 +318,8 @@
                         </span>
                     @else
                         <div class="d-flex align-items-center">
-                            <img src="{{ asset('vendor/adminlte/dist/img/AdminLTELogo.png') }}" alt="IPRPMS Logo"
-                                class="brand-image img-circle elevation-3" style="opacity: .8">
+                            <img src="{{ asset('images/system-logo.png') }}" alt="IPRPMS Logo"
+                                class="brand-image" style="opacity: .9; object-fit: contain">
                             <span
                                 class="brand-text font-weight-light">{{ \App\Models\Setting::get('site_name', 'IPRPMS') }}</span>
                         </div>
@@ -743,7 +743,7 @@
             });
 
             // Initialize DataTables
-            $('.datatable').DataTable({
+            if ($.fn.DataTable) $('.datatable').DataTable({
                 "paging": true,
                 "lengthChange": true,
                 "searching": true,
@@ -786,6 +786,15 @@
     </script>
 
     @stack('scripts')
+    @if(request()->routeIs('dashboard', 'performance.comparison', 'reports.kpi-dashboard'))
+        <style>
+            .analysis-graph-controls { display:flex; flex-wrap:wrap; align-items:center; gap:10px 16px; margin:12px 0; }
+            .analysis-graph-controls label { display:flex; align-items:center; gap:10px; margin:0; font-size:.78rem; white-space:nowrap; }
+            .analysis-graph-controls select { width:auto; min-width:155px; }
+            .analysis-graph-controls small { flex:1 1 230px; font-size:.72rem; line-height:1.4; }
+        </style>
+        <script src="{{ asset('js/analysis-graphs.js') }}?v={{ filemtime(public_path('js/analysis-graphs.js')) }}"></script>
+    @endif
 </body>
 
 </html>

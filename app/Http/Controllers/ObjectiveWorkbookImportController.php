@@ -42,13 +42,24 @@ class ObjectiveWorkbookImportController extends Controller
         $existing = StrategicObjective::whereIn('code', collect($batch['rows'])->pluck('code')->filter())
             ->get(['code', 'status'])->keyBy('code');
         $duplicates = collect($batch['rows'])->pluck('code')->filter()->countBy()->filter(fn ($count) => $count > 1);
-        return view('objectives.import-review', compact('batch', 'departments', 'performerMatches', 'importDefaults', 'existing', 'duplicates', 'token'));
+        $oldTargets = json_decode((string) old('target_overrides', '{}'), true);
+        $targetOverrides = is_array($oldTargets) ? $oldTargets : [];
+        return view('objectives.import-review', compact('batch', 'departments', 'performerMatches', 'importDefaults', 'existing', 'duplicates', 'token', 'targetOverrides'));
     }
 
     public function commit(Request $request, string $token, ObjectivePerformerMatcher $matcher)
     {
         $batch = $this->batch($token);
         $rows = $batch['rows'];
+        $request->validate(['target_overrides' => 'nullable|string|json|max:2000000']);
+        $targetOverrides = json_decode($request->input('target_overrides') ?: '{}', true);
+        if (!is_array($targetOverrides)) throw ValidationException::withMessages(['target_overrides' => 'Invalid target edits. Reload the review page.']);
+        foreach ($targetOverrides as $index => $targets) {
+            if (!ctype_digit((string) $index) || !array_key_exists((int) $index, $rows) || !is_array($targets)
+                || array_diff(array_keys($targets), array_keys(ObjectiveWorkbookImport::PERIOD_COLUMNS))) {
+                throw ValidationException::withMessages(['target_overrides' => 'Target edits contain an unknown row or field.']);
+            }
+        }
         $departmentModels = Department::all();
         $departments = $departmentModels->pluck('id')->map(fn ($id) => (int) $id)->all();
         $codes = [];
@@ -57,6 +68,14 @@ class ObjectiveWorkbookImportController extends Controller
         foreach ($rows as $index => $row) {
             $input = $request->input('rows.'.$index, []);
             if (($input['action'] ?? '') === 'skip') continue;
+            foreach ($targetOverrides[$index] ?? [] as $field => $value) {
+                if ($value === null || $value === '') { $row[$field] = null; continue; }
+                if (!is_numeric($value) || !is_finite((float) $value) || (float) $value < 0 || (float) $value > 9999999999.9999) {
+                    $errors[] = "Row {$row['source_row']}: ".str_replace('_', ' ', $field).' must be a non-negative number up to 9,999,999,999.9999, or blank for N/A.';
+                    continue;
+                }
+                $row[$field] = $value;
+            }
             $code = trim((string) ($input['code'] ?? $row['code']));
             if (!preg_match('/^\d+(?:\.\d+){0,3}$/', $code)) $errors[] = "Row {$row['source_row']}: enter a valid code (up to four levels), or skip.";
             if (isset($codes[$code])) $errors[] = "Rows {$codes[$code]} and {$row['source_row']}: duplicate code {$code}.";

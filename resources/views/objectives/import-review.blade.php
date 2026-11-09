@@ -1,5 +1,6 @@
 @extends('layouts.app')
 @section('page_header_hidden', '1')
+@section('title', 'Review objective import')
 
 @section('content')
 <div class="content-header"><div class="container-fluid"><h1>Review objective import</h1></div></div>
@@ -12,7 +13,8 @@
         <div class="alert alert-warning">Duplicate source codes: {{ $duplicates->keys()->implode(', ') }}. Correct the codes below or skip those rows.</div>
     @endif
     <p>Existing departments are matched by name and preselected in workbook order; the first match is the lead. Review unmatched names and each row's KPI direction, weekly plan method, and accumulation rule.</p>
-    <form method="POST" action="{{ route('objectives.import.commit', $token) }}">@csrf
+    <form method="POST" id="objective-import-form" action="{{ route('objectives.import.commit', $token) }}">@csrf
+        <input type="hidden" name="target_overrides" id="import-target-overrides" value="{{ old('target_overrides', '{}') }}">
         <div class="card">
             <div class="card-body p-0" style="overflow:auto;max-height:70vh">
                 <table class="table table-sm table-bordered table-striped mb-0" style="min-width:1550px">
@@ -45,7 +47,23 @@
                             </td>
                             <td><input name="rows[{{ $i }}][weight]" type="number" step="any" min="0" class="form-control form-control-sm" data-original-number="{{ $displayWeight }}" value="{{ \App\Support\NumberFormatter::format($displayWeight,3,'.','') }}" style="min-width:75px" @readonly($row['weight'] === null)>@if($row['weight'] === null && $defaults['has_children'])<small class="text-info d-block">Calculated from direct children</small>@elseif($row['weight'] === null)<small class="text-muted d-block">Unweighted detail; excluded from score</small>@endif</td>
                             <td>{{ $row['unit'] ?: '-' }}</td><td>{{ \App\Support\NumberFormatter::format($row['baseline_value'] ?? 'N/A') }}</td><td>{{ \App\Support\NumberFormatter::format($row['annual_target'] ?? 'N/A') }}</td>
-                            <td style="min-width:220px"><details><summary>View targets</summary><div class="small">@foreach(\App\Services\ObjectiveWorkbookImport::PERIOD_COLUMNS as $field => $column){{ str_replace('_target','',$field) }}: {{ $row[$field] === null ? 'N/A' : $row[$field] }}<br>@endforeach</div></details></td>
+                            <td style="min-width:280px"><details @if(isset($targetOverrides[$i])) open @endif><summary class="text-primary">Edit targets</summary>
+                                <small class="text-muted d-block my-2">Blank = N/A; 0 is a planned zero. Quarter values can be edited separately and are saved as entered.</small>
+                                <div class="row mx-n1">
+                                @foreach(\App\Services\ObjectiveWorkbookImport::PERIOD_COLUMNS as $field => $column)
+                                    @php
+                                        $edits = is_array($targetOverrides[$i] ?? null) ? $targetOverrides[$i] : [];
+                                        $value = array_key_exists($field, $edits) ? $edits[$field] : ($row[$field] ?? null);
+                                        $value = is_scalar($value) || $value === null ? $value : null;
+                                        $label = ucfirst(str_replace('_target', '', $field));
+                                    @endphp
+                                    <div class="col-6 px-1 mb-2">
+                                        <label class="small mb-0" for="import-target-{{ $i }}-{{ $field }}">{{ $label }}</label>
+                                        <input id="import-target-{{ $i }}-{{ $field }}" type="number" step="any" min="0" max="9999999999.9999" class="form-control form-control-sm import-target-input" data-target-row="{{ $i }}" data-target-field="{{ $field }}" data-original-number="{{ $value }}" value="{{ \App\Support\NumberFormatter::format($value,3,'.','') }}" placeholder="N/A">
+                                    </div>
+                                @endforeach
+                                </div>
+                            </details></td>
                             <td><select name="rows[{{ $i }}][goal_direction]" class="form-control form-control-sm"><option value="increase">Higher is better</option><option value="decrease" @selected(old("rows.$i.goal_direction") === 'decrease')>Lower is better</option></select></td>
                             <td><select name="rows[{{ $i }}][reporting_frequency]" class="form-control form-control-sm">@foreach(['inherit' => 'Use department default', 'daily' => 'Daily', 'weekly' => 'Weekly', 'monthly' => 'Monthly'] as $value => $label)<option value="{{ $value }}" @selected((old("rows.$i.reporting_frequency", $row['reporting_frequency'] ?? 'inherit')) === $value)>{{ $label }}</option>@endforeach</select></td>
  <td><select name="rows[{{ $i }}][weekly_plan_mode]" class="form-control form-control-sm"><option value="distribute">Distribute</option><option value="repeat" @selected(old("rows.$i.weekly_plan_mode") === 'repeat')>Repeat</option></select></td>
@@ -60,3 +78,26 @@
     </form>
 </div></section>
 @endsection
+
+@push('scripts')
+<script data-import-target-editor>
+(function () {
+    const form = document.getElementById('objective-import-form');
+    const payload = document.getElementById('import-target-overrides');
+    if (!form || !payload) return;
+    let edits;
+    try { edits = Object.assign({}, JSON.parse(payload.value || '{}')); } catch (_) { edits = {}; }
+    form.querySelectorAll('.import-target-input').forEach(function (field) {
+        function recordEdit() {
+            const row = field.dataset.targetRow;
+            if (!edits[row]) edits[row] = {};
+            const value = window.numberInputValue ? window.numberInputValue(field) : field.value;
+            edits[row][field.dataset.targetField] = value === '' ? null : value;
+            payload.value = JSON.stringify(edits);
+        }
+        field.addEventListener('input', recordEdit);
+        field.addEventListener('change', recordEdit);
+    });
+})();
+</script>
+@endpush

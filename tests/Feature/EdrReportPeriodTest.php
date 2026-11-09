@@ -131,7 +131,7 @@ class EdrReportPeriodTest extends TestCase
             ]);
             PeriodicPerformance::create([
                 'plan_item_id' => $item->id, 'period' => '2019-july',
-                'actual_value' => $actual, 'status' => 'approved',
+                'actual_value' => $actual, 'status' => 'approved', 'workflow_status' => 'approved_by_head_office',
             ]);
         }
 

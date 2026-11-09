@@ -14,6 +14,8 @@
     .objective-hierarchy-table thead th{font-size:.78rem;color:#526775;background:#f2f6f8;white-space:nowrap}
     .objective-hierarchy-table .objective-code{color:#087f73;white-space:nowrap}
     .objective-description{color:#17394b;font-weight:600;display:block;margin-bottom:4px}
+    .objective-edit-attribution{font-size:.75rem;line-height:1.6;font-weight:400;color:#627585!important;white-space:normal}
+    .objective-edit-attribution strong{font-weight:600;color:#39596c}
     .objective-number{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
     .objective-row-actions{display:flex;flex-wrap:wrap;gap:6px;min-width:170px}
     .objective-row-actions .btn{white-space:nowrap}
@@ -116,11 +118,7 @@
 @section('content')
 @php
     $objectiveEditor = auth()->user();
-    $canEditObjective = static fn ($objective) =>
-        $objectiveEditor->isSystemAdmin()
-        || ($objectiveEditor->hasPermission('manage_objectives') && in_array($objective->status, ['draft', 'returned'], true))
-        || ($objectiveEditor->isPlanReportDirectorate() && $objective->status === 'submitted_to_plan_report_directorate')
-        || ($objectiveEditor->isPlanReportHeadOffice() && $objective->status === 'submitted');
+    $canEditObjective = static fn ($objective) => $objective->canBeEditedBy($objectiveEditor);
 @endphp
 <div class="content-header">
     <div class="container-fluid">
@@ -176,6 +174,7 @@
                                 @endif
                                 <span class="badge badge-info ml-2">{{ $mainObj->children->count() }} sub-objectives</span>
                                 <small class="d-block text-muted mt-1">Owner: {{ $mainObj->department?->name ?? 'Not assigned' }} · Target year: {{ $mainObj->target_year ?? 'Not set' }} · Unit: {{ $mainObj->unit ?: 'Not set' }}</small>
+                                @include('objectives.partials.edit-attribution', ['editedObjective' => $mainObj])
                             </div>
                             <div>
                                 <span class="badge badge-light border">Weight: {{ \App\Support\NumberFormatter::format($mainObj->weight) }}%</span>

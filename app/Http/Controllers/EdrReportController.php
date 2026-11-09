@@ -42,7 +42,10 @@ class EdrReportController extends Controller
         // Attach achievement scores for index view
         $reports->getCollection()->transform(function ($report) {
             $data = $this->calculateReportData($report->department_id, $report->year, $report->reporting_period);
-            $report->achievement = $this->edrCalculator->summary($data)['achievement'];
+            $summary = $this->edrCalculator->summary($data);
+            $report->achievement = $summary['achievement'];
+            $report->performance_state = $summary['status'];
+            $report->performance_complete = $summary['complete'];
             return $report;
         });
 
@@ -347,97 +350,61 @@ class EdrReportController extends Controller
             ->with(['items.performances', 'items.weeklyPerformances'])
             ->first();
 
+        $evidenceReader = app(\App\Services\ReportPeriodEvidence::class);
         foreach ($plan->items as $item) {
             $so = $item->strategicObjective;
             if (!$so || $so->is_reference_only) continue;
             $effectiveWeight = $effectiveWeights[$item->id] ?? null;
 
-            // 1. Calculate Target
-            if ($isAnnual) {
-                $target = (float) ($item->annual_target ?? 0);
-            } elseif ($isWeekly) {
-                $weeklyEntry = $item->weeklyPerformances
-                    ->first(fn ($entry) => (int) $entry->year === (int) $year
-                        && strtolower((string) $entry->month) === $selectedMonth
-                        && (int) $entry->week_number === $selectedWeek);
-                $target = (float) ($weeklyEntry?->planned_value ?? 0);
-            } elseif ($isMonthly) {
-                $targetColumn = $selectedMonth . '_target';
-                $target = (float) ($item->{$targetColumn} ?? 0);
-            } else {
-                $col = $reportingPeriodLower . '_target';
-                $target = (float) ($item->$col ?? 0);
-            }
-
-            // 2. Fetch Actual Performance
-            if ($isAnnual) {
-                $actual = 0;
-                foreach ($quarters as $q) {
-                    $actual += (float) $item->getActualValueForPeriod($q);
-                }
-            } elseif ($isWeekly) {
-                $weeklyEntry = $item->weeklyPerformances
-                    ->first(fn ($entry) => (int) $entry->year === (int) $year
-                        && strtolower((string) $entry->month) === $selectedMonth
-                        && (int) $entry->week_number === $selectedWeek);
-                $actual = (float) ($weeklyEntry?->actual_value ?? 0);
-            } elseif ($isMonthly) {
-                $actual = (float) $item->getActualValueForPeriod($selectedMonth);
-            } else {
-                $actual = (float) $item->getActualValueForPeriod($reportingPeriodLower);
-            }
-
-            // 3. Achievement % (Comp %)
-            $rawAchievement = $isWeekly
+            $evidence = $evidenceReader->forItem($item, $reportingPeriod);
+            $target = $evidence['target'];
+            $actual = $evidence['actual'];
+            $rawAchievement = !$evidence['complete'] ? null : ($isWeekly
                 ? $so->calculateWeeklyAchievement($actual, $target)
-                : $this->edrCalculator->rawAchievement($actual, $target, $so->goal_direction ?? 'increase');
-            $scorecardAchievement = $isWeekly ? null : min(100, $rawAchievement);
+                : $this->edrCalculator->rawAchievement($actual, $target, $so->goal_direction ?? 'increase'));
+            $scorecardAchievement = $isWeekly || $rawAchievement === null ? null : min(100, $rawAchievement);
             $achievement = $scorecardAchievement ?? $rawAchievement;
             // Although achievement can be > 100%, we often use it to calculate weighted scores in views.
             // Let's ensure consistency if we ever add a weighted score column there.
 
             // 4. Cumulative Data
             $cumTarget = 0;
-            $cumActual = 0;
+            $cumActual = null;
+            $cumulativeComplete = $evidence['complete'];
             if ($isMonthly || $isWeekly) {
                 $cumTarget = $target;
                 $cumActual = $actual;
             } elseif (!$isAnnual) {
                 for ($i = 0; $i <= $periodIdx; $i++) {
                     $q = $quarters[$i];
-                    $cumTarget += (float) ($item->{$q . '_target'} ?? 0);
-                    $cumActual += (float) $item->getActualValueForPeriod($q);
+                    $cumulative = $evidenceReader->forItem($item, $q);
+                    $cumTarget += (float) ($cumulative['target'] ?? 0);
+                    if ($cumulative['actual'] !== null) {
+                        $cumActual = ($so->target_distribution === 'checkpoint') ? $cumulative['actual'] : ($cumActual ?? 0) + $cumulative['actual'];
+                    }
+                    if ($cumulative['planned'] && !$cumulative['complete']) $cumulativeComplete = false;
                 }
             } else {
                 $cumTarget = $target;
                 $cumActual = $actual;
             }
-            $cumAchievement = $this->edrCalculator->achievement($cumActual, $cumTarget, $so->goal_direction ?? 'increase');
+            $cumAchievement = $cumulativeComplete && $cumActual !== null
+                ? $this->edrCalculator->achievement($cumActual, $cumTarget, $so->goal_direction ?? 'increase') : null;
 
             // 5. Weight Fallback & Calculated Weight
             $weight = $effectiveWeight ?? 0;
 
             // 6. Prev Year Comparison
-            $prevActual = 0;
+            $prevActual = null;
             if ($prevYearPlan) {
                 $prevItem = $prevYearPlan->items->where('strategic_objective_id', $item->strategic_objective_id)->first();
                 if ($prevItem) {
-                    if ($isAnnual) {
-                        foreach ($quarters as $q) $prevActual += (float) $prevItem->getActualValueForPeriod($q);
-                    } elseif ($isWeekly) {
-                        $prevEntry = $prevItem->weeklyPerformances
-                            ->first(fn ($entry) => (int) $entry->year === (int) ($year - 1)
-                                && strtolower((string) $entry->month) === $selectedMonth
-                                && (int) $entry->week_number === $selectedWeek);
-                        $prevActual = (float) ($prevEntry?->actual_value ?? 0);
-                    } elseif ($isMonthly) {
-                        $prevActual = (float) $prevItem->getActualValueForPeriod($selectedMonth);
-                    } else {
-                        $prevActual = (float) $prevItem->getActualValueForPeriod($reportingPeriodLower);
-                    }
+                    $previous = $evidenceReader->forItem($prevItem, $reportingPeriod);
+                    $prevActual = $previous['complete'] ? $previous['actual'] : null;
                 }
             }
-            $prevComparison = $prevActual > 0 ? (($actual - $prevActual) / $prevActual) * 100 : 0;
+            $prevComparison = $evidence['complete'] && $actual !== null && $prevActual !== null && $prevActual != 0
+                ? (($actual - $prevActual) / $prevActual) * 100 : null;
 
             $results[] = [
                 '_item_id' => $item->id,
@@ -455,19 +422,25 @@ class EdrReportController extends Controller
                 'weight' => $weight,
                 'base_weight' => app(\App\Services\PeriodWeightNormalizer::class)->baseWeight($item),
                 'is_planned' => !is_null($effectiveWeight),
+                'reported' => $evidence['reported'],
+                'complete' => $evidence['complete'],
+                'pending' => $evidence['pending'],
+                'expected' => $evidence['expected'],
+                'completed' => $evidence['completed'],
+                'coverage' => $evidence['coverage'],
                 'measurement' => $so->unit ?? '%',
                 'baseline' => $item->baseline_value ?? 0,
                 'annual_target' => (float) ($item->annual_target ?? 0),
                 'quarter_plan' => $target,
                 'quarter_perf' => $actual,
-                'quarter_comp' => round($achievement, 1),
-                'raw_achievement' => round($rawAchievement, 1),
+                'quarter_comp' => $achievement === null ? null : round($achievement, 1),
+                'raw_achievement' => $rawAchievement === null ? null : round($rawAchievement, 1),
                 'scorecard_achievement' => is_null($scorecardAchievement) ? null : round($scorecardAchievement, 1),
                 'performance_status' => $this->edrCalculator->performanceStatus($rawAchievement),
                 'cumulative_plan' => $cumTarget,
                 'cumulative_perf' => $cumActual,
-                'cumulative_comp' => round($cumAchievement, 1),
-                'comparison' => round($prevComparison, 1),
+                'cumulative_comp' => $cumAchievement === null ? null : round($cumAchievement, 1),
+                'comparison' => $prevComparison === null ? null : round($prevComparison, 1),
                 'report_completeness' => $completeness,
             ];
         }

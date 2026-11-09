@@ -8,7 +8,9 @@
         .header { text-align: center; margin-bottom: 20px; }
         .header h2 { margin: 0; color: #333; }
         table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-        th, td { border: 1px solid #ccc; padding: 2px; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        th, td { border: 1px solid #ccc; padding: 3px 2px; text-align: center; white-space: normal; word-wrap: break-word; vertical-align: middle; }
+        thead { display: table-header-group; }
+        tr { page-break-inside: avoid; }
         th { background-color: #f2f2f2; font-weight: bold; }
         .text-left { text-align: left; padding-left: 5px; }
         .bg-light { background-color: #f9f9f9; }
@@ -26,6 +28,15 @@
     </div>
 
     <table>
+        <colgroup>
+            <col style="width:3%"><col style="width:18%"><col style="width:3%"><col style="width:5%"><col style="width:4%"><col style="width:5%">
+            @php($periodColumnCount = collect($periodGroups)->sum(fn ($group) => count($group['months']) + 1))
+            @foreach($periodGroups as $group)
+                @foreach($group['months'] as $m)<col style="width:{{ 52 / $periodColumnCount }}%">@endforeach
+                <col style="width:{{ 52 / $periodColumnCount }}%">
+            @endforeach
+            <col style="width:10%">
+        </colgroup>
         <thead>
             <tr>
                 <th width="30">S.No</th>
@@ -57,19 +68,13 @@
                         @foreach($group['months'] as $m)
                             @php($cell = $row['months'][$m])
                             <td class="text-primary">
-                                @if(!$cell['planned']) N/A
-                                @elseif(!$cell['reported']) Not Reported
-                                @else {{ $cell['is_rollup'] ? 'Roll-up' : \App\Support\NumberFormatter::format((float)$cell['actual'],3) }}<br>{{ \App\Support\NumberFormatter::format($cell['scorecard_achievement'],3) }}% ({{ $cell['status'] }})@if($cell['raw_achievement'] > 100)<br>Raw {{ \App\Support\NumberFormatter::format($cell['raw_achievement'],3) }}%@endif @if(!$cell['is_rollup'] && abs((float)$cell['effective_weight'] - (float)$row['weight']) > 0.0001)<br>Eff. wt {{ \App\Support\NumberFormatter::format((float)$cell['effective_weight'],3) }}@endif
-                                @endif
+                                @include('reports._master_actual', ['pdf' => true])
                             </td>
                         @endforeach
                         @php($q = $group['quarter'])
                         @php($cell = $row['quarters'][$q])
                         <td class="text-info" style="background:#e3f2fd;">
-                            @if(!$cell['planned']) N/A
-                            @elseif(!$cell['reported']) Not Reported
-                            @else {{ $cell['is_rollup'] ? 'Roll-up' : \App\Support\NumberFormatter::format((float)$cell['actual'],3) }}<br>{{ \App\Support\NumberFormatter::format($cell['scorecard_achievement'],3) }}% ({{ $cell['status'] }})@if($cell['raw_achievement'] > 100)<br>Raw {{ \App\Support\NumberFormatter::format($cell['raw_achievement'],3) }}%@endif @if(!$cell['is_rollup'] && abs((float)$cell['effective_weight'] - (float)$row['weight']) > 0.0001)<br>Eff. wt {{ \App\Support\NumberFormatter::format((float)$cell['effective_weight'],3) }}@endif
-                            @endif
+                            @include('reports._master_actual', ['pdf' => true])
                         </td>
                     @endforeach
 

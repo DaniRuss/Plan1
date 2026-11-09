@@ -41,6 +41,11 @@ Route::middleware(['auth'])->group(function () {
     Route::post('department-plan-files', [App\Http\Controllers\DepartmentPlanSubmissionController::class, 'store'])->name('plan-submissions.store');
     Route::get('department-plan-files/{submission}/download', [App\Http\Controllers\DepartmentPlanSubmissionController::class, 'download'])->name('plan-submissions.download');
     Route::get('/performance-comparison', [DashboardController::class, 'performanceComparison'])->name('performance.comparison')->middleware('can:view_performance');
+      Route::post('/performance-comparison/historical/import', [App\Http\Controllers\HistoricalPerformanceController::class, 'import'])->name('performance.historical.import')->middleware('can:view_performance');
+      Route::patch('/performance-comparison/historical/kpis/{historicalKpi}', [App\Http\Controllers\HistoricalPerformanceController::class, 'updateKpi'])->name('performance.historical.kpis.update')->middleware('can:view_performance');
+      Route::post('/performance-comparison/historical/kpis/{historicalKpi}/mappings', [App\Http\Controllers\HistoricalPerformanceController::class, 'saveMapping'])->name('performance.historical.mappings.save')->middleware('can:view_performance');
+      Route::post('/performance-comparison/historical/mappings/{mapping}/submit', [App\Http\Controllers\HistoricalPerformanceController::class, 'submit'])->name('performance.historical.mappings.submit')->middleware('can:view_performance');
+      Route::post('/performance-comparison/historical/mappings/{mapping}/review', [App\Http\Controllers\HistoricalPerformanceController::class, 'review'])->name('performance.historical.mappings.review')->middleware('can:view_performance');
 
     // Departments
     Route::resource('departments', DepartmentController::class)->middleware('can:manage_departments');

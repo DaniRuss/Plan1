@@ -59,6 +59,16 @@ class ObjectiveWorkbookImport
     private function number($cell, bool $temporal = false): ?float
     {
         $raw = $cell->getValue();
+        if ($cell->isFormula()) {
+            try {
+                $raw = $cell->getCalculatedValue();
+            } catch (\Throwable $e) {
+                throw new \InvalidArgumentException('Cannot calculate target at '.$cell->getCoordinate().': '.$e->getMessage(), 0, $e);
+            }
+            if ($raw !== null && $raw !== '' && !is_numeric($raw)) {
+                throw new \InvalidArgumentException('Invalid formula result at '.$cell->getCoordinate().'. Correct the workbook formula before importing.');
+            }
+        }
         if ($raw === null || trim((string) $raw) === '') return null;
         if ($raw instanceof \DateTimeInterface) return ((int) $raw->format('H')) + ((int) $raw->format('i')) / 60;
         if (is_numeric($raw)) {

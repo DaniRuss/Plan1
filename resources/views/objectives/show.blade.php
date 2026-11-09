@@ -77,15 +77,15 @@
             @endphp
 
             @if($objective->last_change_reason || $revisionHistory->isNotEmpty())
-                <div class="card border-warning shadow-sm">
+                <div class="card border-warning shadow-sm" id="revision-history">
                     <div class="card-header bg-warning text-dark d-flex align-items-center justify-content-between">
                         <h3 class="card-title font-weight-bold mb-0">
-                            <i class="fas fa-history mr-2"></i>Reviewer Changes &amp; Comments
+                            <i class="fas fa-history mr-2"></i>Changes &amp; Revision History
                         </h3>
                         <span class="badge badge-dark">Revision {{ $objective->revision_number }}</span>
                     </div>
                     <div class="card-body">
-                        @if($objective->last_change_reason)
+                        @if($objective->last_change_reason && $revisionHistory->isEmpty())
                             <div class="alert alert-warning mb-3">
                                 <div class="font-weight-bold mb-1">Latest reviewer comment</div>
                                 <div>{{ $objective->last_change_reason }}</div>
@@ -105,12 +105,14 @@
                             @php
                                 $revision = $revisionLog->revision_details;
                                 $changes = $revision['changes'] ?? [];
+                                $proposedOnly = in_array($revision['action'] ?? null, ['reporting_frequency_change_requested','reporting_frequency_change_reject'], true);
                             @endphp
                             <div class="border rounded mb-3 overflow-hidden">
                                 <div class="bg-light px-3 py-2 d-flex flex-wrap justify-content-between">
                                     <strong>
                                         Revision {{ $revision['revision'] ?? '?' }} —
                                         {{ $revision['editor']['name'] ?? optional($revisionLog->user)->name ?? 'Reviewer' }}
+                                    <small class="d-block font-weight-normal mt-1">{{ $revisionLog->editor_attribution['roleLabel'] }} · {{ $proposedOnly ? (($revision['action'] ?? '') === 'reporting_frequency_change_reject' ? 'Frequency change rejected — not applied' : 'Frequency change requested — not yet applied') : (($revision['stage'] ?? '') === 'approved' ? 'After approval' : ucfirst(str_replace('_',' ', $revision['stage'] ?? 'Stage not recorded'))) }}</small>
                                     </strong>
                                     <small class="text-muted">{{ $revisionLog->created_at->format('d M Y, h:i A') }}</small>
                                 </div>
@@ -118,11 +120,14 @@
                                     @if(!empty($revision['reason']))
                                         <p class="mb-3"><strong>Comment:</strong> {{ $revision['reason'] }}</p>
                                     @endif
+                                    @if(!empty($revision['source_objective']['id']))
+                                        <p class="small text-muted">Calculated update caused by objective/activity {{ $revision['source_objective']['code'] ?? $revision['source_objective']['id'] }}.</p>
+                                    @endif
                                     @if(count($changes))
                                         <div class="table-responsive">
                                             <table class="table table-sm table-bordered mb-0">
                                                 <thead class="thead-light">
-                                                    <tr><th>Field changed</th><th>Previous value</th><th>New value</th></tr>
+                                                    <tr><th>{{ $proposedOnly ? 'Proposed field' : 'Field changed' }}</th><th>{{ $proposedOnly ? 'Effective value' : 'Previous value' }}</th><th>{{ $proposedOnly ? 'Proposed value (not applied)' : 'New value' }}</th></tr>
                                                 </thead>
                                                 <tbody>
                                                     @foreach($changes as $field => $change)
@@ -157,10 +162,7 @@
                 <div class="card-footer">
                     @php
                         $objectiveEditor = auth()->user();
-                        $canEditObjective = $objectiveEditor->isSystemAdmin()
-                            || ($objectiveEditor->hasPermission('manage_objectives') && in_array($objective->status, ['draft', 'returned'], true))
-                            || ($objectiveEditor->isPlanReportDirectorate() && $objective->status === 'submitted_to_plan_report_directorate')
-                            || ($objectiveEditor->isPlanReportHeadOffice() && $objective->status === 'submitted');
+                        $canEditObjective = $objective->canBeEditedBy($objectiveEditor);
                     @endphp
                     @can('manage_objectives')
                         @if(in_array($objective->status, ['draft', 'returned'], true))
@@ -202,7 +204,7 @@
                                 @foreach($objective->children as $child)
                                     <tr>
                                         <td><a href="{{ route('objectives.show', $child->id) }}">{{ $child->code }}</a></td>
-                                        <td>{{ $child->description }}</td>
+                                        <td>{{ $child->description }}@include('objectives.partials.edit-attribution', ['editedObjective' => $child])</td>
                                         <td>{{ \App\Support\NumberFormatter::format((float) $child->weight,3) }}%</td>
                                         <td>{{ $child->annual_target === null ? 'Not set' : \App\Support\NumberFormatter::format((float) $child->annual_target,3) }} @if($child->annual_target !== null){{ $child->unit }}@endif</td><td>@include('objectives.partials.status', ['objective' => $child])</td>
                                     </tr>

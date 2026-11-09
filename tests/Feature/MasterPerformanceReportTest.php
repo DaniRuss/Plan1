@@ -32,8 +32,8 @@ class MasterPerformanceReportTest extends TestCase
         $row = collect($response->viewData('gridData'))->firstWhere('id', $objective->id);
 
         $this->assertFalse($row['months']['july']['reported']);
-        $this->assertSame(0.0, $row['months']['july']['actual']);
-        $this->assertSame('Not Reported', $row['months']['july']['status']);
+        $this->assertNull($row['months']['july']['actual']);
+        $this->assertSame('Pending Approval', $row['months']['july']['status']);
         $this->assertTrue($row['months']['august']['reported']);
         $this->assertSame(0.0, $row['months']['august']['actual']);
         $this->assertSame('Below Target', $row['months']['august']['status']);

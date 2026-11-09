@@ -16,17 +16,18 @@
     <div class="card-body">
         <div class="form-group">
             <label for="target_distribution">How targets accumulate</label>
-            <select name="target_distribution" id="target_distribution" class="form-control">
+            <select name="target_distribution" id="target_distribution" class="form-control @error('target_distribution') is-invalid @enderror">
                 <option value="sum" {{ old('target_distribution', $record->target_distribution ?? 'checkpoint') === 'sum' ? 'selected' : '' }}>Flow / Sum — quarter equals the sum of its months</option>
                 <option value="checkpoint" {{ old('target_distribution', $record->target_distribution ?? 'checkpoint') === 'checkpoint' ? 'selected' : '' }}>Cumulative / Checkpoint — quarter equals its final month</option>
                 <option value="manual" {{ old('target_distribution', $record->target_distribution ?? 'checkpoint') === 'manual' ? 'selected' : '' }}>Manual — quarter targets are entered separately</option>
             </select>
+            @error('target_distribution')<div class="invalid-feedback">{{ $message }}</div>@enderror
             <small class="text-muted">Use Sum for transported tons, revenue, trips, kilometres, and other period totals. Use Checkpoint for percentages, availability, speed, and cumulative project progress.</small>
         </div>
 
         <div class="form-group">
             <label for="weekly_plan_mode">How the monthly plan becomes a weekly plan</label>
-            <select name="weekly_plan_mode" id="weekly_plan_mode" class="form-control">
+            <select name="weekly_plan_mode" id="weekly_plan_mode" class="form-control @error('weekly_plan_mode') is-invalid @enderror">
                 <option value="distribute" {{ old('weekly_plan_mode', $record->weekly_plan_mode ?? 'distribute') === 'distribute' ? 'selected' : '' }}>
                     Distribute the monthly plan equally across the weeks in that month
                 </option>
@@ -34,6 +35,7 @@
                     Repeat the full monthly plan in every week of that month
                 </option>
             </select>
+            @error('weekly_plan_mode')<div class="invalid-feedback">{{ $message }}</div>@enderror
             <small class="text-muted">This setting applies to this objective or sub-objective only. Repeated weekly plans are fixed during performance entry.</small>
         </div>
 
@@ -55,16 +57,18 @@
                                 <div class="col-4 px-1">
                                     <label class="small mb-1" for="{{ $key }}_target">{{ $label }}</label>
                                     <input type="number" step="any" min="0" name="{{ $key }}_target" id="{{ $key }}_target"
-                                        class="form-control form-control-sm target-month"
+                                        class="form-control form-control-sm target-month @error($key . '_target') is-invalid @enderror"
                                         data-original-number="{{ old($key . '_target', $record?->{$key . '_target'}) }}" value="{{ \App\Support\NumberFormatter::format(old($key . '_target', $record?->{$key . '_target'}),3,'.','') }}">
+                                    @error($key . '_target')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                 </div>
                             @endforeach
                         </div>
                         <div class="form-group mb-0 mt-3">
                             <label class="small font-weight-bold mb-1" for="{{ $quarter }}_target">{{ strtoupper($quarter) }} Target</label>
                             <input type="number" step="any" min="0" name="{{ $quarter }}_target" id="{{ $quarter }}_target"
-                                class="form-control font-weight-bold quarter-target"
+                                class="form-control font-weight-bold quarter-target @error($quarter . '_target') is-invalid @enderror"
                                 data-original-number="{{ old($quarter . '_target', $record?->{$quarter . '_target'}) }}" value="{{ \App\Support\NumberFormatter::format(old($quarter . '_target', $record?->{$quarter . '_target'}),3,'.','') }}">
+                            @error($quarter . '_target')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             <small class="quarter-calculation-note text-muted"></small>
                         </div>
                     </div>

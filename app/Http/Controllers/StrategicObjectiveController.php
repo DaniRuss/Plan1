@@ -24,6 +24,7 @@ class StrategicObjectiveController extends Controller
         }
 
         $objectives = $query->paginate(50);
+        app(\App\Services\ObjectiveRevisionHistory::class)->loadApprovedAttribution($objectives);
         $departments = Department::orderBy('name')->get();
 
         return view('objectives.index', compact('objectives', 'departments'));
@@ -178,18 +179,21 @@ class StrategicObjectiveController extends Controller
 
         $objective->load(['department', 'leadDepartment', 'parent', 'children', 'lastEditor']);
         $performingDepartments = Department::whereIn('id', $objective->performers ?? [])->orderBy('name')->get(['id', 'name']);
-        $revisionHistory = \App\Models\AuditLog::with('user')
+        $revisionHistory = \App\Models\AuditLog::with('user.roles')
             ->where('model_type', StrategicObjective::class)
             ->where('model_id', $objective->id)
             ->where('action', 'strategic_objective_updated')
-            ->latest()
+            ->orderByDesc('created_at')->orderByDesc('id')
             ->get()
             ->map(function ($log) {
                 $details = json_decode($log->details ?? '', true);
                 $log->revision_details = is_array($details) ? $details : [];
+                $log->editor_attribution = app(\App\Services\ObjectiveRevisionHistory::class)->attribution($log, $log->revision_details);
 
                 return $log;
             });
+
+        app(\App\Services\ObjectiveRevisionHistory::class)->loadApprovedAttribution([$objective]);
 
         return view('objectives.show', compact('objective', 'revisionHistory', 'performingDepartments'));
     }
@@ -201,9 +205,15 @@ class StrategicObjectiveController extends Controller
             403,
             'You cannot edit this objective at its current review stage.'
         );
-        $excludedIds = $objective->children()->pluck('id')->push($objective->id);
+        $excludedIds = collect([$objective->id]);
+        $frontier = [$objective->id];
+        while ($frontier) {
+            $frontier = StrategicObjective::whereIn('parent_id', $frontier)->whereNotIn('id', $excludedIds)->pluck('id')->all();
+            $excludedIds = $excludedIds->merge($frontier);
+        }
         $objectives = StrategicObjective::with('parent')->whereNotIn('id', $excludedIds)
-            ->orderByNaturalCode()->get()->filter(fn ($candidate) => $candidate->getHierarchyLevel() < 4);
+            ->orderByNaturalCode()->get()->filter(fn ($candidate) => $candidate->getHierarchyLevel() < 4
+                && ($objective->status !== 'approved' || $candidate->status === 'approved'));
             
         $departments = Department::whereNull('parent_id')->orderBy('name')->get();
 
@@ -214,7 +224,8 @@ class StrategicObjectiveController extends Controller
         }
 
         $years = \App\Services\CalendarHelper::getAppYears();
-        return view('objectives.edit', compact('objective', 'objectives', 'departments', 'remainingWeight', 'years'));
+        $isPublishedApprovedObjective = $objective->status === 'approved' && $objective->planItems()->exists();
+        return view('objectives.edit', compact('objective', 'objectives', 'departments', 'remainingWeight', 'years', 'isPublishedApprovedObjective'));
     }
 
     public function update(Request $request, StrategicObjective $objective)
@@ -226,7 +237,8 @@ class StrategicObjectiveController extends Controller
             'You cannot edit this objective at its current review stage.'
         );
         $isReviewerEdit = ($user->isPlanReportDirectorate() && $objective->status === 'submitted_to_plan_report_directorate')
-            || ($user->isPlanReportHeadOffice() && $objective->status === 'submitted');
+            || ($user->isPlanReportHeadOffice() && $objective->status === 'submitted')
+            || ($objective->status === 'approved' && !$user->isSystemAdmin());
         $changeReason = $isReviewerEdit
             ? $request->validate(['review_change_reason' => 'required|string|min:5|max:2000'])['review_change_reason']
             : null;
@@ -277,6 +289,21 @@ class StrategicObjectiveController extends Controller
             'include_in_parent_rollup' => 'nullable|boolean',
         ]);
 
+        if (!empty($validated['parent_id'])) {
+            $candidate = StrategicObjective::find($validated['parent_id']);
+            $visited = [];
+            while ($candidate) {
+                if ($candidate->id === $objective->id || isset($visited[$candidate->id])) {
+                    throw ValidationException::withMessages(['parent_id' => 'An objective cannot be its own parent or belong beneath one of its descendants.']);
+                }
+                if ($objective->status === 'approved' && $candidate->status !== 'approved') {
+                    throw ValidationException::withMessages(['parent_id' => 'An approved objective must remain under approved main objectives and activities.']);
+                }
+                $visited[$candidate->id] = true;
+                $candidate = $candidate->parent;
+            }
+        }
+
         // Reviewers may correct submitted objectives, but ownership must remain
         if (array_key_exists('reporting_frequency', $validated) && $validated['reporting_frequency'] !== $objective->reporting_frequency) {
             abort_unless($user->canManageObjectiveFrequency(), 403);
@@ -298,6 +325,14 @@ class StrategicObjectiveController extends Controller
         }
         if (!in_array($validated['lead_department_id'], $validated['performers'], true)) {
             array_unshift($validated['performers'], $validated['lead_department_id']);
+        }
+        if ($objective->status === 'approved' && $objective->planItems()->exists()) {
+            if ((int) $validated['target_year'] !== (int) $objective->target_year) {
+                throw ValidationException::withMessages(['target_year' => 'The performance year cannot change after this objective has been published to departmental reporting.']);
+            }
+            if (array_diff(array_map('intval', $objective->performers ?? []), $validated['performers'])) {
+                throw ValidationException::withMessages(['performers' => 'Keep the existing performer departments because their published reporting records must be preserved. Additional departments may be added.']);
+            }
         }
         $validated['company_consolidation_method'] = 'lead_department';
         $validated['include_in_parent_rollup'] = empty($validated['parent_id'])
@@ -335,43 +370,74 @@ class StrategicObjectiveController extends Controller
         }
 
         $oldParent = $objective->parent;
-        $objective->update($validated);
-        $objective->syncCalculatedWeight();
-        $oldParent?->syncCalculatedWeight();
-        $objective->fresh()->parent?->syncCalculatedWeight();
+        \Illuminate\Support\Facades\DB::transaction(function () use ($objective, $validated, $oldParent, $user, $before, $trackedFields, $changeReason) {
+            $ancestorBefore = [];
+            foreach (array_unique(array_filter([$oldParent?->id, $validated['parent_id'] ?? null])) as $parentId) {
+                $ancestor = StrategicObjective::find($parentId);
+                while ($ancestor && !isset($ancestorBefore[$ancestor->id]) && $ancestor->id !== $objective->id) {
+                    $ancestorBefore[$ancestor->id] = $ancestor->only(['id','weight','status']);
+                    $ancestor = $ancestor->parent;
+                }
+            }
+            $objective->update($validated);
+            $objective->syncCalculatedWeight();
+            $oldParent?->syncCalculatedWeight();
+            $objective->fresh()->parent?->syncCalculatedWeight();
 
-        $objective->refresh();
-        $after = $objective->only($trackedFields);
-        $changes = collect($trackedFields)->mapWithKeys(function ($field) use ($before, $after) {
-            $old = $before[$field] ?? null;
-            $new = $after[$field] ?? null;
+            if ($objective->status === 'approved') {
+                $publisher = app(ObjectivePublisher::class);
+                $publisher->syncApprovedObjective($objective, $user);
+                // Calculated ancestor weights must agree with their published copies too.
+                $parents = collect([$oldParent, $objective->fresh()->parent])->filter()->keyBy('id');
+                while ($parents->isNotEmpty()) {
+                    $next = collect();
+                    foreach ($parents as $parent) {
+                        $parent->refresh();
+                        $parent->syncCalculatedWeight();
+                        $publisher->syncApprovedObjective($parent, $user);
+                        if ($parent->parent) {
+                            $next->put($parent->parent->id, $parent->parent);
+                        }
+                    }
+                    $parents = $next;
+                }
+            }
 
-            return $old != $new ? [$field => ['before' => $old, 'after' => $new]] : [];
-        })->all();
-        \App\Models\AuditLog::log(
-            'strategic_objective_updated',
-            $objective,
-            [
-                'revision' => $objective->revision_number,
-                'stage' => $objective->status,
-                'editor' => ['id' => $user->id, 'name' => $user->name, 'department_id' => $user->department_id],
-                'reason' => $changeReason,
-                'changes' => $changes,
-            ]
-        );
+            $objective->refresh();
+            $after = $objective->only($trackedFields);
+            $changes = collect($trackedFields)->mapWithKeys(function ($field) use ($before, $after) {
+                $old = $before[$field] ?? null;
+                $new = $after[$field] ?? null;
+
+                return $old != $new ? [$field => ['before' => $old, 'after' => $new]] : [];
+            })->all();
+            $history = app(\App\Services\ObjectiveRevisionHistory::class);
+            $history->record($objective, $user, $changes, $changeReason);
+            foreach ($ancestorBefore as $snapshot) {
+                $ancestor = StrategicObjective::find($snapshot['id']);
+                if (!$ancestor || $snapshot['status'] !== 'approved' || $ancestor->weight == $snapshot['weight']) continue;
+                $reason = 'Calculated weight synchronized after editing objective/activity '.$objective->code.'.'.($changeReason ? ' '.$changeReason : '');
+                $ancestor->forceFill(['revision_number'=>(int)$ancestor->revision_number+1,'last_edited_by'=>$user->id,
+                    'last_edited_at'=>now(),'last_edited_stage'=>'approved','last_change_reason'=>$reason])->saveQuietly();
+                $history->record($ancestor,$user,['weight'=>['before'=>$snapshot['weight'],'after'=>$ancestor->weight]],$reason,$objective);
+            }
+        });
 
         if ($isReviewerEdit) {
-            $message = "Objective {$objective->code} was revised by {$user->name}. Reason: {$changeReason}";
+            $message = $objective->status === 'approved'
+                ? "Approved objective {$objective->code} was revised by {$user->name}. Open its Details page to review the changes."
+                : "Objective {$objective->code} was revised by {$user->name}. Reason: {$changeReason}";
+            $notificationTitle = $objective->status === 'approved' ? 'Approved objective revised' : 'Submitted objective revised';
             $owner = $objective->owner_id ? \App\Models\User::find($objective->owner_id) : null;
             if ($owner) {
                 app(\App\Services\WorkflowNotificationService::class)->users(
-                    [$owner], 'Submitted objective revised', $message,
+                    [$owner], $notificationTitle, $message,
                     route('objectives.show', $objective), 'warning', $user
                 );
             } else {
                 app(\App\Services\WorkflowNotificationService::class)->roles(
                     \App\Models\User::ROLE_PLAN_REPORT_DEPARTMENT_EXPERT,
-                    'Submitted objective revised', $message,
+                    $notificationTitle, $message,
                     route('objectives.show', $objective), 'warning', null, $user
                 );
             }
@@ -382,19 +448,7 @@ class StrategicObjectiveController extends Controller
 
     private function canEditObjective(\App\Models\User $user, StrategicObjective $objective): bool
     {
-        if ($user->isSystemAdmin()) {
-            return true;
-        }
-
-        if ($user->hasPermission('manage_objectives') && in_array($objective->status, ['draft', 'returned'], true)) {
-            return true;
-        }
-
-        if ($user->isPlanReportDirectorate() && $objective->status === 'submitted_to_plan_report_directorate') {
-            return true;
-        }
-
-        return $user->isPlanReportHeadOffice() && $objective->status === 'submitted';
+        return $objective->canBeEditedBy($user);
     }
 
     public function destroy(StrategicObjective $objective)

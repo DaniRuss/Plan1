@@ -12,21 +12,22 @@ use PhpOffice\PhpWord\SimpleType\TblWidth;
 
 class OrganizationPlanWordExporter
 {
-    private const NAVY = '173B54';
-    private const TEAL = '078F83';
-    private const MINT = 'DFF4F0';
-    private const PALE = 'F3F7F9';
-    private const TEXT = '24343F';
+    private array $brand;
+
+    public function __construct(DocumentBranding $branding)
+    {
+        $this->brand = $branding->resolve();
+    }
 
     public function download(Collection $plans, ?EdrPlanDocument $narrative, Collection $departmentNames, int $year)
     {
         $word = new PhpWord();
         $word->setDefaultFontName('Aptos');
         $word->setDefaultFontSize(10);
-        $word->addTitleStyle(1, ['name' => 'Aptos Display', 'size' => 18, 'bold' => true, 'color' => self::NAVY], ['spaceBefore' => 280, 'spaceAfter' => 120]);
-        $word->addTitleStyle(2, ['name' => 'Aptos Display', 'size' => 13, 'bold' => true, 'color' => self::TEAL], ['spaceBefore' => 260, 'spaceAfter' => 100, 'borderBottomSize' => 8, 'borderBottomColor' => self::TEAL]);
+        $word->addTitleStyle(1, ['name' => 'Aptos Display', 'size' => 18, 'bold' => true, 'color' => $this->brand['dark']], ['spaceBefore' => 280, 'spaceAfter' => 120]);
+        $word->addTitleStyle(2, ['name' => 'Aptos Display', 'size' => 13, 'bold' => true, 'color' => $this->brand['accent']], ['spaceBefore' => 260, 'spaceAfter' => 100, 'borderBottomSize' => 8, 'borderBottomColor' => $this->brand['accent']]);
 
-        $section = $word->addSection(['marginTop' => 900, 'marginBottom' => 850, 'marginLeft' => 1050, 'marginRight' => 1050]);
+        $section = $word->addSection(['marginTop' => 1650, 'headerHeight' => 450, 'marginBottom' => 850, 'marginLeft' => 1050, 'marginRight' => 1050]);
         $this->addHeader($section, $year);
         $this->addFooter($section);
         $this->addCover($section, $plans, $narrative, $year);
@@ -54,7 +55,7 @@ class OrganizationPlanWordExporter
 
         $schedule = $word->addSection([
             'orientation' => 'landscape', 'pageSizeW' => Converter::inchToTwip(11.69),
-            'pageSizeH' => Converter::inchToTwip(8.27), 'marginTop' => 700,
+            'pageSizeH' => Converter::inchToTwip(8.27), 'marginTop' => 1500, 'headerHeight' => 450,
             'marginBottom' => 700, 'marginLeft' => 650, 'marginRight' => 650,
         ]);
         $this->addHeader($schedule, $year);
@@ -77,30 +78,35 @@ class OrganizationPlanWordExporter
         $header = $section->addHeader();
         $table = $header->addTable(['width' => 100 * 50, 'unit' => TblWidth::PERCENT]);
         $table->addRow();
-        $left = $table->addCell(6500, ['borderBottomSize' => 10, 'borderBottomColor' => self::TEAL]);
-        $left->addText('ETHIO-DJIBOUTI RAILWAY', ['bold' => true, 'size' => 9, 'color' => self::NAVY]);
-        $right = $table->addCell(2500, ['borderBottomSize' => 10, 'borderBottomColor' => self::TEAL]);
-        $right->addText("{$year} EFY | IPRPMS", ['bold' => true, 'size' => 8, 'color' => self::TEAL], ['alignment' => Jc::END]);
+        $left = $table->addCell(6500, ['borderBottomSize' => 10, 'borderBottomColor' => $this->brand['accent']]);
+        if ($this->brand['logo_path']) {
+            [$width,$height] = getimagesize($this->brand['logo_path']);
+            $scale = min(110/$width,36/$height);
+            $left->addImage($this->brand['logo_path'], ['width'=>$width*$scale,'height'=>$height*$scale,'wrappingStyle'=>'inline']);
+        }
+        $left->addText($this->brand['name'], ['bold' => true, 'size' => 9, 'color' => $this->brand['dark']]);
+        $right = $table->addCell(2500, ['borderBottomSize' => 10, 'borderBottomColor' => $this->brand['accent']]);
+        $right->addText("{$year} EFY | ".$this->brand['abbreviation'], ['bold' => true, 'size' => 8, 'color' => $this->brand['accent']], ['alignment' => Jc::END]);
     }
 
     private function addFooter($section): void
     {
         $footer = $section->addFooter();
-        $footer->addPreserveText('EDR Integrated Planning, Reporting & Performance Management System   |   Page {PAGE} of {NUMPAGES}', ['size' => 8, 'color' => '7B8B94'], ['alignment' => Jc::CENTER]);
+        $footer->addPreserveText($this->brand['name'].'   |   Page {PAGE} of {NUMPAGES}', ['size' => 8, 'color' => '7B8B94'], ['alignment' => Jc::CENTER]);
     }
 
     private function addCover($section, Collection $plans, ?EdrPlanDocument $narrative, int $year): void
     {
         $section->addTextBreak(4);
-        $section->addText('COMPLETE APPROVED ORGANIZATION PLAN', ['bold' => true, 'size' => 11, 'color' => self::TEAL, 'allCaps' => true], ['alignment' => Jc::CENTER, 'spaceAfter' => 180]);
-        $section->addText('ORGANIZATION EDR PLAN', ['bold' => true, 'size' => 30, 'color' => self::NAVY], ['alignment' => Jc::CENTER, 'spaceAfter' => 100]);
-        $section->addText("{$year} EFY", ['bold' => true, 'size' => 19, 'color' => self::TEAL], ['alignment' => Jc::CENTER, 'spaceAfter' => 500]);
+        $section->addText('COMPLETE APPROVED ORGANIZATION PLAN', ['bold' => true, 'size' => 11, 'color' => $this->brand['accent'], 'allCaps' => true], ['alignment' => Jc::CENTER, 'spaceAfter' => 180]);
+        $section->addText('ORGANIZATION EDR PLAN', ['bold' => true, 'size' => 30, 'color' => $this->brand['dark']], ['alignment' => Jc::CENTER, 'spaceAfter' => 100]);
+        $section->addText("{$year} EFY", ['bold' => true, 'size' => 19, 'color' => $this->brand['accent']], ['alignment' => Jc::CENTER, 'spaceAfter' => 500]);
         $meta = $section->addTable(['alignment' => Jc::CENTER, 'cellMargin' => 140]);
         $meta->addRow(650);
         foreach ([[$plans->count(), 'APPROVED PLANS'], [$plans->sum(fn ($plan) => $plan->items->count()), 'ACTION-PLAN ITEMS'], [strtoupper(str_replace('_', ' ', $narrative?->status ?? 'draft')), 'DOCUMENT STATUS']] as [$value, $label]) {
-            $cell = $meta->addCell(2800, ['bgColor' => self::PALE, 'borderColor' => 'D8E3E8', 'borderSize' => 6, 'valign' => 'center']);
-            $cell->addText((string) $value, ['bold' => true, 'size' => 15, 'color' => self::NAVY], ['alignment' => Jc::CENTER]);
-            $cell->addText($label, ['bold' => true, 'size' => 7, 'color' => self::TEAL], ['alignment' => Jc::CENTER]);
+            $cell = $meta->addCell(2800, ['bgColor' => $this->brand['pale'], 'borderColor' => 'D8E3E8', 'borderSize' => 6, 'valign' => 'center']);
+            $cell->addText((string) $value, ['bold' => true, 'size' => 15, 'color' => $this->brand['dark']], ['alignment' => Jc::CENTER]);
+            $cell->addText($label, ['bold' => true, 'size' => 7, 'color' => $this->brand['accent']], ['alignment' => Jc::CENTER]);
         }
         $section->addTextBreak(3);
         $section->addText('Prepared by: '.($narrative?->preparer?->name ?? 'Plan and Report Department'), ['size' => 10, 'color' => '60727D'], ['alignment' => Jc::CENTER]);
@@ -117,51 +123,42 @@ class OrganizationPlanWordExporter
             return;
         }
         foreach (preg_split('/\R{2,}/', $text) as $paragraph) {
-            $section->addText(trim($paragraph), ['color' => self::TEXT], ['alignment' => Jc::BOTH, 'lineHeight' => 1.35, 'spaceAfter' => 140]);
+            $section->addText(trim($paragraph), ['color' => '24343F'], ['alignment' => Jc::BOTH, 'lineHeight' => 1.35, 'spaceAfter' => 140]);
         }
     }
 
     private function addObjectiveSummary($section, Collection $plans, Collection $departmentNames): void
     {
         $table = $section->addTable(['width' => 100 * 50, 'unit' => TblWidth::PERCENT, 'borderSize' => 5, 'borderColor' => 'CCD9DF', 'cellMargin' => 85]);
-        $this->headerRow($table, ['Code', 'Objective / Detailed Activity', 'Department', 'Unit', 'Weight', 'Implementing Bodies']);
-        foreach ($plans as $plan) {
-            $row = $table->addRow();
-            $cell = $row->addCell(10000, ['gridSpan' => 6, 'bgColor' => self::MINT]);
-            $cell->addText($plan->department->name.' - '.$plan->title, ['bold' => true, 'color' => self::NAVY]);
-            foreach ($plan->items->sortBy(fn ($item) => $item->strategicObjective?->code) as $item) {
+        $this->headerRow($table, ['Code', 'Objective / Detailed Activity', 'Unit', 'Weight', 'Implementing Departments']);
+        foreach (app(ApprovedPlanExport::class)->items($plans) as $item) {
+                $plan = $item->plan;
                 $objective = $item->strategicObjective;
-                $bodies = collect($item->performers ?? [])->map(fn ($id) => $departmentNames[$id] ?? null)->filter()->implode(', ');
+                $bodies = implode('; ',app(ApprovedPlanExport::class)->implementers($item,$departmentNames,$plan->department_id));
                 $this->dataRow($table, [
-                    $objective?->code, $objective?->description, $plan->department->name,
+                    $objective?->code, $objective?->description,
                     $item->unit ?: $objective?->unit, \App\Support\NumberFormatter::format($item->weight ?: $objective?->weight).'%',
                     $bodies ?: $plan->department->name,
                 ]);
-            }
         }
     }
 
     private function addSchedule($section, Collection $plans, Collection $departmentNames): void
     {
-        $months = ['Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr','May','Jun'];
+        $periods = ApprovedPlanExport::PERIODS;
         $table = $section->addTable(['width' => 100 * 50, 'unit' => TblWidth::PERCENT, 'borderSize' => 4, 'borderColor' => 'C7D5DC', 'cellMargin' => 35]);
-        $this->headerRow($table, array_merge(['Code', 'Planned Activity / KPI', 'Unit', 'Baseline', 'Weight', 'Annual'], $months, ['Q1','Q2','Q3','Q4','Implementers']), 6.5);
-        $monthFields = ['july','august','september','october','november','december','january','february','march','april','may','june'];
-        foreach ($plans as $plan) {
-            $row = $table->addRow();
-            $cell = $row->addCell(10000, ['gridSpan' => 23, 'bgColor' => self::MINT]);
-            $cell->addText($plan->department->name.' - '.$plan->title, ['bold' => true, 'size' => 7.5, 'color' => self::NAVY]);
-            foreach ($plan->items->sortBy(fn ($item) => $item->strategicObjective?->code) as $item) {
+        $this->headerRow($table, array_merge(['Code', 'Planned Activity / KPI', 'Unit', 'Baseline', 'Weight', 'Annual'], array_values($periods), ['Implementing Departments']), 6.5);
+        foreach (app(ApprovedPlanExport::class)->items($plans) as $item) {
+                $plan = $item->plan;
                 $objective = $item->strategicObjective;
-                $bodies = collect($item->performers ?? [])->map(fn ($id) => $departmentNames[$id] ?? null)->filter()->implode(', ');
+                $bodies = implode('; ',app(ApprovedPlanExport::class)->implementers($item,$departmentNames,$plan->department_id));
                 $values = [$objective?->code, $objective?->description, $item->unit ?: $objective?->unit, $item->baseline_value ?? $objective?->baseline_value ?? '-', \App\Support\NumberFormatter::format($item->weight ?: $objective?->weight).'%', $item->annual_target ?? '-'];
-                foreach ($monthFields as $month) $values[] = $item->{$month.'_target'} ?? '-';
-                array_push($values, $item->q1_target ?? '-', $item->q2_target ?? '-', $item->q3_target ?? '-', $item->q4_target ?? '-', $bodies ?: $plan->department->name);
+                foreach ($periods as $period=>$label) $values[] = $item->{$period.'_target'} ?? '-';
+                $values[] = $bodies ?: $plan->department->name;
                 foreach (range(3, 21) as $numericColumn) {
                     if (isset($values[$numericColumn]) && is_numeric($values[$numericColumn])) $values[$numericColumn] = \App\Support\NumberFormatter::format($values[$numericColumn]);
                 }
                 $this->dataRow($table, $values, 6.2);
-            }
         }
     }
 
@@ -169,7 +166,7 @@ class OrganizationPlanWordExporter
     {
         $table->addRow(420, ['tblHeader' => true]);
         foreach ($labels as $label) {
-            $table->addCell(null, ['bgColor' => self::NAVY, 'valign' => 'center'])
+            $table->addCell(null, ['bgColor' => $this->brand['dark'], 'valign' => 'center'])
                 ->addText($label, ['bold' => true, 'size' => $size, 'color' => 'FFFFFF'], ['alignment' => Jc::CENTER]);
         }
     }
@@ -179,7 +176,7 @@ class OrganizationPlanWordExporter
         $table->addRow();
         foreach ($values as $index => $value) {
             $table->addCell(null, ['valign' => 'center'])
-                ->addText((string) ($value ?? '-'), ['size' => $size, 'color' => self::TEXT], ['alignment' => $index === 1 ? Jc::START : Jc::CENTER]);
+                ->addText((string) ($value ?? '-'), ['size' => $size, 'color' => '24343F'], ['alignment' => $index === 1 ? Jc::START : Jc::CENTER]);
         }
     }
 }

@@ -158,6 +158,23 @@ class StrategicObjective extends Model
         return $this->hasMany(PlanItem::class);
     }
 
+    public function canBeEditedBy(User $user): bool
+    {
+        if ($user->isSystemAdmin()) {
+            return true;
+        }
+
+        if ($this->status === 'approved') {
+            return $user->isPlanReportDepartmentExpert()
+                || $user->isPlanReportDirectorate()
+                || $user->isPlanReportHeadOffice();
+        }
+
+        return ($user->hasPermission('manage_objectives') && in_array($this->status, ['draft', 'returned'], true))
+            || ($user->isPlanReportDirectorate() && $this->status === 'submitted_to_plan_report_directorate')
+            || ($user->isPlanReportHeadOffice() && $this->status === 'submitted');
+    }
+
     // --- Weight Logic Helpers ---
 
     /**

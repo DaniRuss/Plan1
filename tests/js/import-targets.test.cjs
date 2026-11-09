@@ -1,0 +1,20 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+test('import target edits are packed in one payload and retain earlier edits, blank and zero', () => {
+    const payload = {value: JSON.stringify({'4': {q1_target: '25.1234'}})};
+    const input = (row, field, value) => ({dataset: {targetRow: row, targetField: field}, value, listeners: {}, addEventListener(name, fn) {this.listeners[name] = fn;}});
+    const july = input('0','july_target','0');
+    const august = input('0','august_target','');
+    const fields = [july,august];
+    const context = {document: {getElementById: id => id === 'objective-import-form' ? {querySelectorAll: () => fields} : payload}};
+    context.window = context;
+    const source = fs.readFileSync('resources/views/objectives/import-review.blade.php','utf8').match(/<script data-import-target-editor>([\s\S]*?)<\/script>/);
+    vm.createContext(context);
+    vm.runInContext(source[1],context);
+    july.listeners.input(); august.listeners.change();
+    assert.deepEqual(JSON.parse(payload.value), {'0': {july_target: '0', august_target: null}, '4': {q1_target: '25.1234'}});
+    july.value = '42.54166667'; july.listeners.input();
+    assert.equal(JSON.parse(payload.value)['0'].july_target, '42.54166667');
+});
